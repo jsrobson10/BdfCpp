@@ -36,8 +36,7 @@ BdfArray::BdfArray(char pData[], int pSize)
 		}
 
 		// Get the data
-		char* bytes_data = new char[size_data];
-		memcpy(bytes_data, pData + i, size_data);
+		char* bytes_data = pData + i;
 
 		// Move along memory
 		i += size_data;
@@ -85,68 +84,76 @@ BdfArray* BdfArray::clear() {
 	return this;
 }
 
-int BdfArray::serialize(char **pData)
+int BdfArray::_serializeSeek()
 {
-	std::vector<char> data;
+	int size = 0;
 
-	for(BdfObject *object : objects)
-	{
-		char *object_data;
-		int32_t size = object->serialize(&object_data);
-		char *object_size = reverseIfLittleEndian((char*)&size, sizeof(size));
-
-		for(int i=0;i<sizeof(int32_t);i++) {
-			data.push_back(object_size[i]);
-		}
-
-		for(int i=0;i<size;i++) {
-			data.push_back(object_data[i]);
-		}
-
-		free(object_data);
-		free(object_size);
+	for(BdfObject* object : objects) {
+		size += object->_serializeSeek();
+		size += 4;
 	}
 
-	char *data2 = new char[data.size()];
-
-	for(int i=0;i<data.size();i++) {
-		data2[i] = data[i];
-	}
-
-	*pData = data2;
-	return data.size();
+	return size;
 }
 
-std::string BdfArray::serializeHumanReadable(BdfIndent indent, int it)
+int BdfArray::_serialize(char *data)
 {
-	if(objects.size() == 0) {
-		return "[]";
+	int size = 0;
+
+	for(BdfObject* object : objects)
+	{
+		// Get the object
+		int32_t size_object = object->_serialize(data + size + 4);
+		char* size_object_c = reverseIfLittleEndian(&size_object, 4);
+
+		// Send back the object
+		memcpy(data + size, size_object_c, 4);
+		delete[] size_object_c;
+		size += size_object;
+		size += 4;
 	}
 
-	std::string data = "[";
+	return size;
+}
+
+void BdfArray::serializeHumanReadable(std::ostream &out, BdfIndent indent, int it)
+{
+	if(objects.size() == 0) {
+		out << "[]";
+		return;
+	}
+
+	out << "[";
 
 	for(int i=0;i<objects.size();i++)
 	{
 		BdfObject *o = objects[i];
 
-		data += indent.breaker;
+		out << indent.breaker;
 
 		for(int n=0;n<=it;n++) {
-			data += indent.indent;
+			out << indent.indent;
 		}
 
-		data += o->serializeHumanReadable(indent, it + 1);
+		o->serializeHumanReadable(out, indent, it + 1);
 
 		if(objects.size() > i + 1) {
-			data += ", ";
+			out << ", ";
 		}
 	}
 
-	data += indent.breaker;
+ 	out << indent.breaker;
 
 	for(int n=0;n<it;n++) {
-		data += indent.indent;
+		out << indent.indent;
 	}
 
-	return data + "]";
+	out << "]";
+}
+
+void BdfArray::freeAll()
+{
+	for(BdfObject* bdf : objects) {
+		bdf->freeAll();
+	}
 }

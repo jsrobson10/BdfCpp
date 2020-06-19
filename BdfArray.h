@@ -9,6 +9,7 @@
 #define BDFARRAY_H_
 
 #include "headers.h"
+#include <iostream>
 #include <vector>
 
 class BdfArray
@@ -20,7 +21,8 @@ public:
 	BdfArray();
 	BdfArray(char data[], int size);
 	virtual ~BdfArray();
-	int serialize(char **data);
+	int _serializeSeek();
+	int _serialize(char *data);
 	std::string serializeHumanReadable(BdfIndent indent, int upto);
 	BdfArray* add(BdfObject *o);
 	BdfArray* clear();
@@ -28,6 +30,9 @@ public:
 	BdfObject* get(int index);
 	BdfArray* set(int index, BdfObject *o);
 	int size();
+
+	void serializeHumanReadable(std::ostream &stream, BdfIndent indent, int upto);
+	void freeAll();
 };
 
 #endif /* BDFARRAY_H_ */

@@ -9,6 +9,7 @@
 #include "helpers.h"
 #include <iostream>
 #include <string.h>
+#include <sstream>
 
 BdfObject::BdfObject(char *pData, int pSize)
 {
@@ -16,20 +17,24 @@ BdfObject::BdfObject(char *pData, int pSize)
 	{
 		s = pSize - 1;
 		type = pData[0];
-		data = new char[s];
-		memcpy(data, pData + 1, s);
 
 		if(type == BdfTypes::STRING) {
-			object = new std::string(data, s);
+			object = new std::string(pData + 1, s);
+			return;
 		}
 
 		if(type == BdfTypes::ARRAY) {
-			object = new BdfArray(data, s);
+			object = new BdfArray(pData + 1, s);
+			return;
 		}
 
 		if(type == BdfTypes::NAMED_LIST) {
-			object = new BdfNamedList(data, s);
+			object = new BdfNamedList(pData + 1, s);
+			return;
 		}
+
+		data = new char[s];
+		memcpy(data, pData + 1, s);
 	}
 
 	else {
@@ -44,37 +49,64 @@ BdfObject::BdfObject() : BdfObject(new char[0], 0) {
 }
 
 BdfObject::~BdfObject() {
-	//delete[] data;
+	delete[] data;
 }
 
 char BdfObject::getType() {
 	return type;
 }
 
+int BdfObject::_serializeSeek()
+{
+	if(type == BdfTypes::STRING) {
+		return ((std::string*)object)->size() + 1;
+	}
+
+	if(type == BdfTypes::ARRAY) {
+		return ((BdfArray*)object)->_serializeSeek() + 1;
+	}
+
+	if(type == BdfTypes::NAMED_LIST) {
+		return ((BdfNamedList*)object)->_serializeSeek() + 1;
+	}
+
+	return s + 1;
+}
+
 int BdfObject::serialize(char **pData)
 {
+	int size = _serializeSeek();
+	*pData = new char[size];
+
+	_serialize(*pData);
+
+	return size;
+}
+
+int BdfObject::_serialize(char *pData)
+{
+	pData[0] = type;
+
 	if(type == BdfTypes::STRING) {
 		std::string* str = (std::string*)object;
 		const char* bytes = str->c_str();
-		data = new char[str->size()];
-		memcpy(data, bytes, str->size());
-		s = str->size();
+		memcpy(pData + 1, bytes, str->size());
+		return str->size() + 1;
 	}
 
 	if(type == BdfTypes::ARRAY) {
 		BdfArray* v = (BdfArray*)object;
-		s = v->serialize(&data);
+		int size = v->_serialize(pData + 1);
+		return size + 1;
 	}
 
 	if(type == BdfTypes::NAMED_LIST) {
 		BdfNamedList* v = (BdfNamedList*)object;
-		s = v->serialize(&data);
+		int size = v->_serialize(pData + 1);
+		return size + 1;
 	}
 
-	*pData = new char[s + 1];
-	memcpy(*pData + 1, data, s);
-	*pData[0] = type;
-
+	memcpy(pData + 1, data, s);
 	return s + 1;
 }
 
@@ -89,156 +121,240 @@ std::string calcIndent(BdfIndent indent, int it)
 	return t;
 }
 
-std::string BdfObject::serializeHumanReadable(BdfIndent indent, int it)
+void BdfObject::freeAll()
 {
-	if(type == BdfTypes::BOOLEAN) {
-		if(getBoolean()) return "true";
-		else return "false";
+	if(type == BdfTypes::ARRAY) {
+		((BdfArray*)object)->freeAll();
+		delete (BdfArray*)object;
 	}
 
-	// Objects
-	if(type == BdfTypes::ARRAY) return ((BdfArray*)object)->serializeHumanReadable(indent, it);
-	if(type == BdfTypes::NAMED_LIST) return ((BdfNamedList*)object)->serializeHumanReadable(indent, it);
-	if(type == BdfTypes::STRING) return serializeString(*(std::string*)object);
-
-	// Primitives
-	if(type == BdfTypes::INTEGER) return std::to_string(getInteger())+"I";
-	if(type == BdfTypes::SHORT) return std::to_string(getShort())+"S";
-	if(type == BdfTypes::LONG) return std::to_string(getLong())+"L";
-	if(type == BdfTypes::BYTE) return std::to_string((int)getByte())+"B";
-	if(type == BdfTypes::DOUBLE) return std::to_string(getDouble())+"D";
-	if(type == BdfTypes::FLOAT) return std::to_string(getFloat())+"F";
-
-	// Arrays
-
-	if(type == BdfTypes::ARRAY_INTEGER)
-	{
-		std::string str = "(" + calcIndent(indent, it);
-
-		int32_t* v;
-		int size = getIntegerArray(&v);
-
-		for(int i=0;i<size;i++) {
-			str += indent.breaker + calcIndent(indent, it) + std::to_string(v[i]) + "I, ";
-		}
-
-		str = str.substr(0, str.size() - 2);
-		str += indent.breaker + calcIndent(indent, it - 1) + ")";
-
-		return str;
+	if(type == BdfTypes::NAMED_LIST) {
+		((BdfNamedList*)object)->freeAll();
+		delete (BdfNamedList*)object;
 	}
 
-	if(type == BdfTypes::ARRAY_BOOLEAN)
-	{
-		std::string str = "(" + calcIndent(indent, it);
-
-		bool* v;
-		int size = getBooleanArray(&v);
-
-		for(int i=0;i<size;i++) {
-			str += indent.breaker + calcIndent(indent, it) + (v[i] ? "true" : "false") + ", ";
-		}
-
-		str = str.substr(0, str.size() - 2);
-		str += indent.breaker + calcIndent(indent, it - 1) + ")";
-
-		return str;
+	if(type == BdfTypes::STRING) {
+		delete (std::string*)object;
 	}
 
-	if(type == BdfTypes::ARRAY_SHORT)
-	{
-		std::string str = "(" + calcIndent(indent, it);
+	type = BdfTypes::EMPTY;
 
-		int16_t* v;
-		int size = getShortArray(&v);
-
-		for(int i=0;i<size;i++) {
-			str += indent.breaker + calcIndent(indent, it) + std::to_string(v[i]) + "S, ";
-		}
-
-		str = str.substr(0, str.size() - 2);
-		str += indent.breaker + calcIndent(indent, it - 1) + ")";
-
-		return str;
-	}
-
-	if(type == BdfTypes::ARRAY_LONG)
-	{
-		std::string str = "(" + calcIndent(indent, it);
-
-		int64_t* v;
-		int size = getLongArray(&v);
-
-		for(int i=0;i<size;i++) {
-			str += indent.breaker + calcIndent(indent, it) + std::to_string(v[i]) + "L, ";
-		}
-
-		str = str.substr(0, str.size() - 2);
-		str += indent.breaker + calcIndent(indent, it - 1) + ")";
-
-		return str;
-	}
-
-	if(type == BdfTypes::ARRAY_BYTE)
-	{
-		std::string str = "(" + calcIndent(indent, it);
-
-		char* v;
-		int size = getByteArray(&v);
-
-		for(int i=0;i<size;i++) {
-			str += indent.breaker + calcIndent(indent, it) + std::to_string((int)v[i]) + "B, ";
-		}
-
-		str = str.substr(0, str.size() - 2);
-		str += indent.breaker + calcIndent(indent, it - 1) + ")";
-
-		return str;
-	}
-
-	if(type == BdfTypes::ARRAY_DOUBLE)
-	{
-		std::string str = "(" + calcIndent(indent, it);
-
-		double* v;
-		int size = getDoubleArray(&v);
-
-		for(int i=0;i<size;i++) {
-			str += indent.breaker + calcIndent(indent, it) + std::to_string(v[i]) + "D, ";
-		}
-
-		str = str.substr(0, str.size() - 2);
-		str += indent.breaker + calcIndent(indent, it - 1) + ")";
-
-		return str;
-	}
-
-	if(type == BdfTypes::ARRAY_INTEGER)
-	{
-		std::string str = "(" + calcIndent(indent, it);
-
-		float* v;
-		int size = getFloatArray(&v);
-
-		for(int i=0;i<size;i++) {
-			str += indent.breaker + calcIndent(indent, it) + std::to_string(v[i]) + "F, ";
-		}
-
-		str = str.substr(0, str.size() - 2);
-		str += indent.breaker + calcIndent(indent, it - 1) + ")";
-
-		return str;
-	}
-
-	return "undefined";
+	delete[] data;
 }
 
-std::string BdfObject::serializeHumanReadable(BdfIndent indent) {
-	return serializeHumanReadable(indent, 0);
+void BdfObject::serializeHumanReadable(std::ostream &out) {
+	serializeHumanReadable(out, BdfIndent("", ""), 0);
+}
+
+void BdfObject::serializeHumanReadable(std::ostream &out, BdfIndent indent) {
+	serializeHumanReadable(out, indent, 0);
+}
+
+void BdfObject::serializeHumanReadable(std::ostream &out, BdfIndent indent, int it)
+{
+	switch (type)
+	{
+		// Objects
+
+		case BdfTypes::ARRAY: {
+			((BdfArray*)object)->serializeHumanReadable(out, indent, it);
+			return;
+		}
+
+		case BdfTypes::NAMED_LIST: {
+			((BdfNamedList*)object)->serializeHumanReadable(out, indent, it);
+			return;
+		}
+
+		case BdfTypes::STRING: {
+			out << serializeString(*(std::string*)object);
+			return;
+		}
+
+		// Primitives
+
+		case BdfTypes::INTEGER: {
+			out << std::to_string(getInteger()) << "I";
+			return;
+		}
+
+		case BdfTypes::BOOLEAN: {
+			if(getBoolean()) out << "true";
+			else out << "false";
+			return;
+		}
+
+		case BdfTypes::LONG: {
+			out << std::to_string(getLong()) << "L";
+			return;
+		}
+
+		case BdfTypes::SHORT: {
+			out << std::to_string(getShort()) << "S";
+			return;
+		}
+
+		case BdfTypes::BYTE: {
+			out << std::to_string(getByte()) << "B";
+			return;
+		}
+
+		case BdfTypes::DOUBLE: {
+			out << std::to_string(getDouble()) << "D";
+			return;
+		}
+
+		case BdfTypes::FLOAT: {
+			out << std::to_string(getFloat()) << "F";
+			return;
+		}
+
+		// Arrays
+
+		case BdfTypes::ARRAY_INTEGER:
+		{
+			out << "(" << calcIndent(indent, it);
+
+			int32_t* v;
+			int size = getIntegerArray(&v);
+
+			for(int i=0;i<size;i++) {
+				out << indent.breaker << calcIndent(indent, it) << std::to_string(v[i]) << "I";
+				if(i != size - 1) out << ", ";
+			}
+
+			out << indent.breaker << calcIndent(indent, it - 1) << ")";
+
+			delete[] v;
+			return;
+		}
+
+		case BdfTypes::ARRAY_BOOLEAN:
+		{
+			out << "(" << calcIndent(indent, it);
+
+			bool* v;
+			int size = getBooleanArray(&v);
+
+			for(int i=0;i<size;i++) {
+				out << indent.breaker << calcIndent(indent, it) << (v[i] ? "true" : "false");
+				if(i != size - 1) out << ", ";
+			}
+
+			out << indent.breaker << calcIndent(indent, it - 1) + ")";
+
+			delete[] v;
+			return;
+		}
+
+		case BdfTypes::ARRAY_LONG:
+		{
+			out << "(" << calcIndent(indent, it);
+
+			int64_t* v;
+			int size = getLongArray(&v);
+
+			for(int i=0;i<size;i++) {
+				out << indent.breaker << calcIndent(indent, it) << std::to_string(v[i]) << "L";
+				if(i != size - 1) out << ", ";
+			}
+
+			out << indent.breaker << calcIndent(indent, it - 1) << ")";
+
+			delete[] v;
+			return;
+		}
+
+		case BdfTypes::ARRAY_SHORT:
+		{
+			out << "(" << calcIndent(indent, it);
+
+			int16_t* v;
+			int size = getShortArray(&v);
+
+			for(int i=0;i<size;i++) {
+				out << indent.breaker << calcIndent(indent, it) << std::to_string(v[i]) << "S";
+				if(i != size - 1) out << ", ";
+			}
+
+			out << indent.breaker << calcIndent(indent, it - 1) << ")";
+
+			delete[] v;
+			return;
+		}
+
+		case BdfTypes::ARRAY_BYTE:
+		{
+			out << "(" << calcIndent(indent, it);
+
+			char* v;
+			int size = getByteArray(&v);
+
+			for(int i=0;i<size;i++) {
+				out << indent.breaker << calcIndent(indent, it) << std::to_string((int)v[i]) << "B";
+				if(i != size - 1) out << ", ";
+			}
+
+			out << indent.breaker << calcIndent(indent, it - 1) << ")";
+
+			delete[] v;
+			return;
+		}
+
+		case BdfTypes::ARRAY_DOUBLE:
+		{
+			out << "(" << calcIndent(indent, it);
+
+			double* v;
+			int size = getDoubleArray(&v);
+
+			for(int i=0;i<size;i++) {
+				out << indent.breaker << calcIndent(indent, it) << std::to_string(v[i]) << "D";
+				if(i != size - 1) out << ", ";
+			}
+
+			out << indent.breaker << calcIndent(indent, it - 1) << ")";
+
+			delete[] v;
+			return;
+		}
+
+		case BdfTypes::ARRAY_FLOAT:
+		{
+			out << "(" << calcIndent(indent, it);
+
+			float* v;
+			int size = getFloatArray(&v);
+
+			for(int i=0;i<size;i++) {
+				out << indent.breaker << calcIndent(indent, it) << std::to_string(v[i]) << "F";
+				if(i != size - 1) out << ", ";
+			}
+
+			out << indent.breaker << calcIndent(indent, it - 1) << ")";
+
+			delete[] v;
+			return;
+		}
+
+		default: {
+			out << "undefined";
+			return;
+		}
+	}
+}
+
+std::string BdfObject::serializeHumanReadable(BdfIndent indent)
+{
+	std::stringstream out;
+
+	serializeHumanReadable(out, indent, 0);
+
+	return out.str();
 }
 
 std::string BdfObject::serializeHumanReadable() {
-	return serializeHumanReadable(BdfIndent("", ""), 0);
+	return serializeHumanReadable(BdfIndent("", ""));
 }
 
 // Get
@@ -489,6 +605,7 @@ std::string BdfObject::getString()
 	if(type == BdfTypes::STRING) {
 		v = (std::string*)object;
 	} else {
+		free(object);
 		*v = "";
 	}
 
@@ -533,6 +650,8 @@ BdfNamedList* BdfObject::getNamedList()
 
 BdfObject* BdfObject::setInteger(int32_t v)
 {
+	delete[] data;
+
 	s = sizeof(v);
 	type = BdfTypes::INTEGER;
 	data = reverseIfLittleEndian(&v, sizeof(v));
@@ -541,6 +660,8 @@ BdfObject* BdfObject::setInteger(int32_t v)
 
 BdfObject* BdfObject::setBoolean(bool v)
 {
+	delete[] data;
+
 	s = 1;
 	data = new char[1] {(char)(v ? 0x01 : 0x00)};
 	type = BdfTypes::BOOLEAN;
@@ -549,6 +670,8 @@ BdfObject* BdfObject::setBoolean(bool v)
 
 BdfObject* BdfObject::setLong(int64_t v)
 {
+	delete[] data;
+
 	s = sizeof(v);
 	type = BdfTypes::LONG;
 	data = reverseIfLittleEndian(&v, sizeof(v));
@@ -557,6 +680,8 @@ BdfObject* BdfObject::setLong(int64_t v)
 
 BdfObject* BdfObject::setShort(int16_t v)
 {
+	delete[] data;
+
 	s = sizeof(v);
 	type = BdfTypes::SHORT;
 	data = reverseIfLittleEndian(&v, sizeof(v));
@@ -565,6 +690,8 @@ BdfObject* BdfObject::setShort(int16_t v)
 
 BdfObject* BdfObject::setByte(char v)
 {
+	delete[] data;
+
 	s = sizeof(v);
 	type = BdfTypes::BYTE;
 	data = reverseIfLittleEndian(&v, sizeof(v));
@@ -573,6 +700,8 @@ BdfObject* BdfObject::setByte(char v)
 
 BdfObject* BdfObject::setDouble(double v)
 {
+	delete[] data;
+
 	s = sizeof(v);
 	type = BdfTypes::DOUBLE;
 	data = reverseIfLittleEndian(&v, sizeof(v));
@@ -581,6 +710,8 @@ BdfObject* BdfObject::setDouble(double v)
 
 BdfObject* BdfObject::setFloat(float v)
 {
+	delete[] data;
+
 	s = sizeof(v);
 	type = BdfTypes::FLOAT;
 	data = reverseIfLittleEndian(&v, sizeof(v));
@@ -592,6 +723,7 @@ BdfObject* BdfObject::setFloat(float v)
 BdfObject* BdfObject::setIntegerArray(int32_t* v, int size)
 {
 	int l = sizeof(int32_t);
+	delete[] data;
 
 	s = l * size;
 	data = new char[s];
@@ -610,6 +742,8 @@ BdfObject* BdfObject::setIntegerArray(int32_t* v, int size)
 
 BdfObject* BdfObject::setBooleanArray(bool* v, int size)
 {
+	delete[] data;
+
 	s = size;
 	data = new char[s];
 	type = BdfTypes::ARRAY_BOOLEAN;
@@ -624,6 +758,7 @@ BdfObject* BdfObject::setBooleanArray(bool* v, int size)
 BdfObject* BdfObject::setShortArray(int16_t* v, int size)
 {
 	int l = sizeof(int16_t);
+	delete[] data;
 
 	s = l * size;
 	data = new char[s];
@@ -643,6 +778,7 @@ BdfObject* BdfObject::setShortArray(int16_t* v, int size)
 BdfObject* BdfObject::setLongArray(int64_t* v, int size)
 {
 	int l = sizeof(int64_t);
+	delete[] data;
 
 	s = l * size;
 	data = new char[s];
@@ -661,6 +797,8 @@ BdfObject* BdfObject::setLongArray(int64_t* v, int size)
 
 BdfObject* BdfObject::setByteArray(char* v, int size)
 {
+	delete[] data;
+
 	s = size;
 	type = BdfTypes::ARRAY_BYTE;
 
@@ -673,6 +811,7 @@ BdfObject* BdfObject::setByteArray(char* v, int size)
 BdfObject* BdfObject::setDoubleArray(double* v, int size)
 {
 	int l = sizeof(double);
+	delete[] data;
 
 	s = l * size;
 	data = new char[s];
@@ -692,6 +831,7 @@ BdfObject* BdfObject::setDoubleArray(double* v, int size)
 BdfObject* BdfObject::setFloatArray(float* v, int size)
 {
 	int l = sizeof(float);
+	delete[] data;
 
 	s = l * size;
 	data = new char[s];
@@ -712,6 +852,7 @@ BdfObject* BdfObject::setFloatArray(float* v, int size)
 
 BdfObject* BdfObject::setString(std::string v)
 {
+	delete[] data;
 	type = BdfTypes::STRING;
 	object = &v;
 
@@ -720,6 +861,7 @@ BdfObject* BdfObject::setString(std::string v)
 
 BdfObject* BdfObject::setArray(BdfArray *v)
 {
+	delete[] data;
 	type = BdfTypes::ARRAY;
 	object = v;
 
@@ -728,6 +870,7 @@ BdfObject* BdfObject::setArray(BdfArray *v)
 
 BdfObject* BdfObject::setNamedList(BdfNamedList *v)
 {
+	delete[] data;
 	type = BdfTypes::NAMED_LIST;
 	object = v;
 

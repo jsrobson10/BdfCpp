@@ -9,6 +9,7 @@
 #define BDFOBJECT_H_
 
 #include "headers.h"
+#include <iostream>
 #include <string>
 
 class BdfObject
@@ -27,10 +28,16 @@ class BdfObject
 	virtual ~BdfObject();
 
 	char getType();
+	int _serializeSeek();
+	int _serialize(char *data);
 	int serialize(char **data);
-	std::string serializeHumanReadable(BdfIndent indent, int upto);
+
+	void serializeHumanReadable(std::ostream &stream, BdfIndent indent, int upto);
+	void serializeHumanReadable(std::ostream &stream, BdfIndent indent);
+	void serializeHumanReadable(std::ostream &stream);
 	std::string serializeHumanReadable(BdfIndent indent);
 	std::string serializeHumanReadable();
+	void freeAll();
 
 	// Get
 

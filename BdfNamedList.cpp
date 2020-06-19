@@ -69,8 +69,7 @@ BdfNamedList::BdfNamedList(char* pData, int pSize)
 		}
 
 		// Get the data
-		char* bytes_data = new char[size_data];
-		memcpy(bytes_data, pData + i, size_data);
+		char* bytes_data = pData + i;
 
 		// Move along memory
 		i += size_data;
@@ -157,9 +156,9 @@ BdfObject* BdfNamedList::get(std::string key)
 	return v;
 }
 
-int BdfNamedList::serialize(char **pData)
+int BdfNamedList::_serializeSeek()
 {
-	std::vector<char> data;
+	int size = 0;
 
 	for(ListObject object : objects)
 	{
@@ -167,77 +166,89 @@ int BdfNamedList::serialize(char **pData)
 			continue;
 		}
 
-		const char *object_key = object.key.c_str();
-		int32_t size_key = object.key.length();
-		char *object_size_key = reverseIfLittleEndian((char*)&size_key, sizeof(size_key));
-
-		for(int i=0;i<sizeof(int32_t);i++) {
-			data.push_back(object_size_key[i]);
-		}
-
-		for(int i=0;i<size_key;i++) {
-			data.push_back(object_key[i]);
-		}
-
-		char *object_data;
-		int32_t size_data = object.object->serialize(&object_data);
-		char *object_size_data = reverseIfLittleEndian((char*)&size_data, sizeof(size_data));
-
-		for(int i=0;i<sizeof(int32_t);i++) {
-			data.push_back(object_size_data[i]);
-		}
-
-		for(int i=0;i<size_data;i++) {
-			data.push_back(object_data[i]);
-		}
-
-		free(object_size_key);
-		free(object_data);
-		free(object_size_data);
+		size += object.key.size();
+		size += object.object->_serializeSeek();
+		size += 8;
 	}
 
-	char *data2 = new char[data.size()];
-
-	for(int i=0;i<data.size();i++) {
-		data2[i] = data[i];
-	}
-
-	*pData = data2;
-	return data.size();
+	return size;
 }
 
-std::string BdfNamedList::serializeHumanReadable(BdfIndent indent, int it)
+int BdfNamedList::_serialize(char* data)
 {
-	if(objects.size() == 0) {
-		return "{}";
+	int size = 0;
+
+	for(ListObject object : objects)
+	{
+		// Get the size of the key
+		int32_t size_key = object.key.size();
+		char* size_key_c = reverseIfLittleEndian(&size_key, 4);
+
+		// Copy the key size
+		memcpy(data + size, size_key_c, 4);
+		delete[] size_key_c;
+		size += 4;
+
+		// Send back the key size
+		const char* bytes_key = object.key.c_str();
+
+		// Send back the key
+		memcpy(data + size, bytes_key, size_key);
+		size += size_key;
+
+		// Get the object
+		int32_t size_object = object.object->_serialize(data + size + 4);
+		char* size_object_c = reverseIfLittleEndian(&size_object, 4);
+
+		// Send back the object
+		memcpy(data + size, size_object_c, 4);
+		delete[] size_object_c;
+		size += size_object;
+		size += 4;
 	}
 
-	std::string data = "{";
+	return size;
+}
+
+void BdfNamedList::serializeHumanReadable(std::ostream &out, BdfIndent indent, int it)
+{
+	if(objects.size() == 0) {
+		out << "{}";
+		return;
+	}
+
+	out << "{";
 
 	for(int i=0;i<objects.size();i++)
 	{
 		ListObject list_o = objects[i];
 
-		data += indent.breaker;
+		out << indent.breaker;
 
 		for(int n=0;n<=it;n++) {
-			data += indent.indent;
+			out << indent.indent;
 		}
 
-		data += serializeString(list_o.key);
-		data += ": ";
-		data += list_o.object->serializeHumanReadable(indent, it + 1);
+		out << serializeString(list_o.key) << ": ";
+		list_o.object->serializeHumanReadable(out, indent, it + 1);
 
 		if(objects.size() > i + 1) {
-			data += ", ";
+			out << ", ";
 		}
 	}
 
-	data += indent.breaker;
+ 	out << indent.breaker;
 
 	for(int n=0;n<it;n++) {
-		data += indent.indent;
+		out << indent.indent;
 	}
 
-	return data + "}";
+	out << "}";
+}
+
+void BdfNamedList::freeAll()
+{
+	for(ListObject o : objects) {
+		o.object->freeAll();
+	}
 }

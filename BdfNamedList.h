@@ -9,6 +9,7 @@
 #define BDFNAMEDLIST_H_
 
 #include "headers.h"
+#include <iostream>
 #include <vector>
 #include <string>
 
@@ -32,8 +33,11 @@ public:
 	BdfNamedList();
 	BdfNamedList(char data[], int size);
 	virtual ~BdfNamedList();
-	int serialize(char **data);
-	std::string serializeHumanReadable(BdfIndent indent, int upto);
+	int _serializeSeek();
+	int _serialize(char *data);
+
+	void serializeHumanReadable(std::ostream &stream, BdfIndent indent, int upto);
+	void freeAll();
 
 	BdfObject* get(std::string key);
 	BdfNamedList* set(std::string key, BdfObject* value);

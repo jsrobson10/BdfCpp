@@ -9,39 +9,51 @@
 #include <iostream>
 #include "BdfObject.h"
 #include "BdfArray.h"
+#include <unistd.h>
 
 int main()
 {
 	BdfObject* bdf = new BdfObject();
-	BdfNamedList* nl = bdf->getNamedList();
-	BdfArray* array = new BdfArray();
+	BdfObject* bdf_last = bdf;
 
-	double* d_array = new double[4] {
-		1.2, 6.9, 42.0, 8,
-	};
+	// Allocate a MB of data
+	int s = 1024*1024*1024;
+	char* bigData = new char[s];
 
-	array->add((new BdfObject())->setFloat(42.0f));
-	array->add((new BdfObject())->setDouble(420.0));
-	array->add((new BdfObject())->setInteger(123));
-	array->add((new BdfObject()));
-	array->add((new BdfObject())->setBoolean(false));
-	array->add((new BdfObject())->setBoolean(true));
-	array->add((new BdfObject())->setDoubleArray(d_array, 4));
+	for(int i=0;i<s;i++) {
+		bigData[i] = (char)0;
+	}
 
-	nl->set("age", (new BdfObject())->setDouble(23));
-	nl->set("array", (new BdfObject())->setArray(array));
-	nl->set("value", (new BdfObject())->setLong(45));
+	for(int i=0;i<10;i++)
+	{
+		BdfArray* a = bdf_last->getArray();
+		bdf_last = new BdfObject();
+		a->add(bdf_last);
+	}
 
-	std::cout << bdf->serializeHumanReadable() << "\n";
+	bdf_last->getArray()->add((new BdfObject())->setByteArray(bigData, s));
+
+	delete[] bigData;
+
+	//bdf->serializeHumanReadable(std::cout, BdfIndent("  ", "\n"));
 
 	char* bytes;
 	int size = bdf->serialize(&bytes);
 
-	BdfObject* bdf2 = new BdfObject(bytes, size);
+	bdf->freeAll();
 
-	std::cout << bdf2->serializeHumanReadable(BdfIndent("  ", "\n")) << "\n";
+	bdf = new BdfObject(bytes, size);
+	delete[] bytes;
 
-	//std::cout << bdf2->getNamedList()->get("array")->getArray()->get(0)->getFloat() << "\n";
+	bdf->freeAll();
+
+	//bdf->serializeHumanReadable(std::cout, BdfIndent("  ", "\n"));
+
+	std::cout << "1\n";
+
+	sleep(5);
+
+	std::cout << "2\n";
 
 	return 0;
 }
