@@ -98,7 +98,7 @@ reader2->serializeHumanReadable(std::cout, BdfIndent("\t", "\n"));
 std::string data_hr = reader2->serializeHumanReadable(BdfIndent("\t", "\n"));
 
 // A reader object can be loaded from a human readable object
-BdfReaderHuman(data_hr);
+BdfReaderHuman reader3(data_hr);
 
 ```
 
