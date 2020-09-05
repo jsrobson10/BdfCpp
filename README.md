@@ -71,6 +71,17 @@ bdf->setInteger(5);
 // Set an integer with an automatic type
 bdf->setAutoInt(53);
 
+// Set a primitive array of ints
+int intArray[] = {3, 4, 5, 6};
+bdf->setIntegerArray(intArray, 4);
+
+// Get a byte array
+char* byteArray;
+int byteArraySize;
+bdf->getByteArray(&byteArray, &byteArraySize);
+
+delete[] byteArray;
+
 // Get the type of variable of the object
 int type = bdf->getType();
 
@@ -98,7 +109,7 @@ reader2->serializeHumanReadable(std::cout, BdfIndent("\t", "\n"));
 std::string data_hr = reader2->serializeHumanReadable(BdfIndent("\t", "\n"));
 
 // A reader object can be loaded from a human readable object
-BdfReaderHuman reader3(data_hr);
+BdfReaderHuman(data_hr);
 
 ```
 
