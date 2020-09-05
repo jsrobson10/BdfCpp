@@ -1,12 +1,6 @@
-/*
- * BdfNamedList.cpp
- *
- *  Created on: 31 May 2020
- *      Author: josua
- */
 
-#include "headers.h"
-#include "helpers.h"
+#include "Bdf.h"
+#include "BdfHelpers.h"
 #include <cstdint>
 #include <vector>
 #include <string>
@@ -14,7 +8,7 @@
 #include <iostream>
 
 
-ListObject::ListObject(std::string pKey, BdfObject* pObject) {
+ListObject::ListObject(int pKey, BdfObject* pObject) {
 	key = pKey;
 	object = pObject;
 }
@@ -23,100 +17,187 @@ ListObject::~ListObject() {
 
 }
 
-BdfNamedList::BdfNamedList(char* pData, int pSize)
+BdfNamedList::BdfNamedList(BdfLookupTable* pLookupTable, const char* data, int size)
 {
+	lookupTable = pLookupTable;
+
 	int i = 0;
 
-	while(true)
+	while(i < size)
 	{
-		if(i+4 > pSize) {
-			break;
+		// Get the object
+		char key_size = 0;
+		char key_size_bytes;
+		char bdf_size = 0;
+		char bdf_size_bytes;
+		
+		BdfObject::getFlagData(data + i, NULL, &bdf_size_bytes, &key_size_bytes);
+		key_size = BdfObject::getSizeBytes(key_size_bytes);
+
+		if(i + bdf_size + 1 > size) {
+			return;
 		}
 
-		// Get the size of the key
-		char* size_key_c = reverseIfLittleEndian(pData + i, 4);
-		int32_t size_key = *((int32_t*)size_key_c);
-		delete[] size_key_c;
+		int object_size = BdfObject::getSize(data + i);
 
-		// Move along memory
-		i += 4;
+		if(object_size < 0 || i + object_size > size) {
+			return;
+		}
 
-		if(i+size_key > pSize) {
-			break;
+		BdfObject* object = new BdfObject(lookupTable, data + i, object_size);
+		i += object_size;
+
+		switch(key_size_bytes)
+		{
+			case 2:
+				key_size = 1;
+				break;
+			case 1:
+				key_size = 2;
+				break;
+			case 0:
+				key_size = 4;
+				break;
+			default:
+				return;
 		}
 
 		// Get the key
-		char* bytes_key = new char[size_key];
-		memcpy(bytes_key, pData + i, size_key);
+		int key = 0;
+		char key_buff[key_size];
+		reverseIfLittleEndian(key_buff, data + i, key_size);
 
-		// Move along memory
-		i += size_key;
-
-		if(i+4 > pSize) {
-			break;
+		switch(key_size_bytes)
+		{
+			case 2:
+				key = *((unsigned char*)key_buff);
+				break;
+			case 1:
+				key = *((unsigned short*)key_buff);
+				break;
+			case 0:
+				key = *((int*)key_buff);
+				break;
 		}
 
-		// Get the size of the data
-		char* size_data_c = reverseIfLittleEndian(pData + i, 4);
-		int32_t size_data = *((int32_t*)size_data_c);
-		delete[] size_data_c;
-
-		// Move along memory
-		i += 4;
-
-		if(i+size_data > pSize) {
-			break;
+		if(lookupTable->hasKeyLocation(key)) {
+			return;
 		}
 
-		// Get the data
-		char* bytes_data = pData + i;
+		i += key_size;
 
-		// Move along memory
-		i += size_data;
-
-		// Add the new object
-		objects.push_back(ListObject(std::string(bytes_key, size_key), new BdfObject(bytes_data, size_data)));
-
-
+		// Add the list item
+		objects.push_back(ListObject(key, object));
 	}
 }
 
-BdfNamedList::BdfNamedList() : BdfNamedList(new char[0], 0) {
+BdfNamedList::BdfNamedList(BdfLookupTable* lookupTable) : BdfNamedList(lookupTable, NULL, 0) {
 
 }
 
-BdfNamedList::~BdfNamedList() {
-
-}
-
-std::vector<std::string> BdfNamedList::keys()
+BdfNamedList::BdfNamedList(BdfLookupTable* pLookupTable, BdfStringReader* sr)
 {
-	std::vector<std::string> keys;
+	lookupTable = pLookupTable;
+	sr->upto += 1;
+
+	// {"key": ..., "key2": ...}
+	try
+	{
+		for(;;)
+		{
+			sr->ignoreBlanks();
+	
+			wchar_t c = sr->upto[0];
+	
+			if(c == '}') {
+				sr->upto += 1;
+				break;
+			}
+	
+			if(c != '"') {
+				throw BdfError(BdfError::ERROR_SYNTAX, *sr);
+			}
+	
+			std::string key = sr->getQuotedString();
+	
+			// There should be a colon after this
+			sr->ignoreBlanks();
+			if(sr->upto[0] != ':') {
+				throw BdfError(BdfError::ERROR_SYNTAX, *sr);
+			}
+	
+			sr->upto += 1;
+			sr->ignoreBlanks();
+	
+			set(key, new BdfObject(lookupTable, sr));
+	
+			// There should be a comma after this
+			sr->ignoreBlanks();
+			c = sr->upto[0];
+	
+			if(c == '}') {
+				sr->upto += 1;
+				return;
+			}
+	
+			if(c != ',') {
+				throw BdfError(BdfError::ERROR_SYNTAX, *sr);
+			}
+	
+			sr->upto += 1;
+			sr->ignoreBlanks();
+		}
+	}
+
+	catch(BdfError e)
+	{
+		for(ListObject o : objects) {
+			delete o.object;
+		}
+	}
+}
+
+BdfNamedList::~BdfNamedList()
+{
+	for(ListObject o : objects) {
+		delete o.object;
+	}
+}
+
+std::vector<int> BdfNamedList::keys()
+{
+	std::vector<int> keys;
 	keys.resize(objects.size());
 
-	for(int i=0;i<objects.size();i++) {
-		if(objects[i].object->getType() != BdfTypes::EMPTY) {
-			keys.push_back(objects[i].key);
-		}
+	for(unsigned int i=0;i<objects.size();i++) {
+		keys.push_back(objects[i].key);
 	}
 
 	return keys;
 }
 
-bool BdfNamedList::exists(std::string key)
+bool BdfNamedList::exists(std::string key) {
+	return exists(lookupTable->getLocation(key));
+}
+
+bool BdfNamedList::exists(int key)
 {
-	for(int i=0;i<objects.size();i++) {
+	for(unsigned int i=0;i<objects.size();i++) {
 		if(objects[i].key == key) {
-			return objects[i].object->getType() != BdfTypes::EMPTY;
+			return true;
 		}
 	}
 
 	return false;
 }
 
-BdfNamedList* BdfNamedList::set(std::string key, BdfObject* v)
+BdfNamedList* BdfNamedList::set(std::string key, BdfObject* v) {
+	return set(lookupTable->getLocation(key), v);
+}
+
+BdfNamedList* BdfNamedList::set(int key, BdfObject* v)
 {
-	for(int i=0;i<objects.size();i++) {
+	for(unsigned int i=0;i<objects.size();i++) {
 		if(objects[i].key == key) {
 			objects[i].object = v;
 			return this;
@@ -128,9 +209,13 @@ BdfNamedList* BdfNamedList::set(std::string key, BdfObject* v)
 	return this;
 }
 
-BdfObject* BdfNamedList::remove(std::string key)
+BdfObject* BdfNamedList::remove(std::string key) {
+	return remove(lookupTable->getLocation(key));
+}
+
+BdfObject* BdfNamedList::remove(int key)
 {
-	for(int i=0;i<objects.size();i++) {
+	for(unsigned int i=0;i<objects.size();i++) {
 		if(objects[i].key == key)
 		{
 			BdfObject* v = objects[i].object;
@@ -139,75 +224,85 @@ BdfObject* BdfNamedList::remove(std::string key)
 		}
 	}
 
-	return new BdfObject();
+	return new BdfObject(lookupTable);
 }
 
-BdfObject* BdfNamedList::get(std::string key)
+BdfObject* BdfNamedList::get(std::string key) {
+	return get(lookupTable->getLocation(key));
+}
+
+BdfObject* BdfNamedList::get(int key)
 {
-	for(int i=0;i<objects.size();i++) {
+	for(unsigned int i=0;i<objects.size();i++) {
 		if(objects[i].key == key) {
 			return objects[i].object;
 		}
 	}
 
-	BdfObject* v = new BdfObject();
+	BdfObject* v = new BdfObject(lookupTable);
 	set(key, v);
 
 	return v;
 }
 
-int BdfNamedList::_serializeSeek()
+int BdfNamedList::serializeSeeker(int* locations)
 {
 	int size = 0;
 
 	for(ListObject object : objects)
 	{
-		if(object.object->getType() == BdfTypes::EMPTY) {
-			continue;
+		int location = locations[object.key];
+
+		if(location > 65535) {		// >= 2 ^ 16
+			size += 4;
+		} else if(location > 255) {	// >= 2 ^ 8
+			size += 2;
+		} else {					// < 2 ^ 8
+			size += 1;
 		}
 
-		size += object.key.size();
-		size += object.object->_serializeSeek();
-		size += 8;
+		size += object.object->serializeSeeker(locations);
 	}
 
 	return size;
 }
 
-int BdfNamedList::_serialize(char* data)
+int BdfNamedList::serialize(char* data, int* locations)
 {
-	int size = 0;
+	int pos = 0;
 
 	for(ListObject object : objects)
 	{
-		// Get the size of the key
-		int32_t size_key = object.key.size();
-		char* size_key_c = reverseIfLittleEndian(&size_key, 4);
+		int location = locations[object.key];
 
-		// Copy the key size
-		memcpy(data + size, size_key_c, 4);
-		delete[] size_key_c;
-		size += 4;
+		char size_bytes_tag;
+		char size_bytes;
 
-		// Send back the key size
-		const char* bytes_key = object.key.c_str();
+		if(location > 65535) {
+			size_bytes_tag = 0;
+			size_bytes = 4;
+		} else if(location > 255) {
+			size_bytes_tag = 1;
+			size_bytes = 2;
+		} else {
+			size_bytes_tag = 2;
+			size_bytes = 1;
+		}
 
-		// Send back the key
-		memcpy(data + size, bytes_key, size_key);
-		size += size_key;
+		int size = object.object->serialize(data + pos, locations, size_bytes_tag);
+		int offset = pos + size;
 
-		// Get the object
-		int32_t size_object = object.object->_serialize(data + size + 4);
-		char* size_object_c = reverseIfLittleEndian(&size_object, 4);
+		char bytes[4];
+		reverseIfLittleEndian(bytes, &location, 4);
 
-		// Send back the object
-		memcpy(data + size, size_object_c, 4);
-		delete[] size_object_c;
-		size += size_object;
-		size += 4;
+		for(int i=0;i<size_bytes;i++) {
+			data[i + offset] = bytes[i - size_bytes + 4];
+		}
+
+		pos += size + size_bytes;
 	}
 
-	return size;
+	return pos;
 }
 
 void BdfNamedList::serializeHumanReadable(std::ostream &out, BdfIndent indent, int it)
@@ -219,7 +314,7 @@ void BdfNamedList::serializeHumanReadable(std::ostream &out, BdfIndent indent, i
 
 	out << "{";
 
-	for(int i=0;i<objects.size();i++)
+	for(unsigned int i=0;i<objects.size();i++)
 	{
 		ListObject list_o = objects[i];
 
@@ -228,8 +323,10 @@ void BdfNamedList::serializeHumanReadable(std::ostream &out, BdfIndent indent, i
 		for(int n=0;n<=it;n++) {
 			out << indent.indent;
 		}
+		
+		std::string name = lookupTable->getName(list_o.key);
 
-		out << serializeString(list_o.key) << ": ";
+		out << serializeString(name) << ": ";
 		list_o.object->serializeHumanReadable(out, indent, it + 1);
 
 		if(objects.size() > i + 1) {
@@ -246,9 +343,10 @@ void BdfNamedList::serializeHumanReadable(std::ostream &out, BdfIndent indent, i
 	out << "}";
 }
 
-void BdfNamedList::freeAll()
+void BdfNamedList::getLocationUses(int* locations)
 {
-	for(ListObject o : objects) {
-		o.object->freeAll();
+	for(ListObject object : objects) {
+		locations[object.key] += 1;
+		object.object->getLocationUses(locations);
 	}
 }

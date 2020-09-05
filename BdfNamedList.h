@@ -1,14 +1,8 @@
-/*
- * BdfNamedList.h
- *
- *  Created on: 31 May 2020
- *      Author: josua
- */
 
 #ifndef BDFNAMEDLIST_H_
 #define BDFNAMEDLIST_H_
 
-#include "headers.h"
+#include "Bdf.h"
 #include <iostream>
 #include <vector>
 #include <string>
@@ -18,9 +12,9 @@ class ListObject
 public:
 
 	BdfObject *object;
-	std::string key;
+	int key;
 
-	ListObject(std::string key, BdfObject* object);
+	ListObject(int key, BdfObject* object);
 	virtual ~ListObject();
 };
 
@@ -28,22 +22,30 @@ class BdfNamedList
 {
 private:
 	std::vector<ListObject> objects;
+	BdfLookupTable* lookupTable;
 
 public:
-	BdfNamedList();
-	BdfNamedList(char data[], int size);
+	BdfNamedList(BdfLookupTable* lookupTable);
+	BdfNamedList(BdfLookupTable* lookupTable, const char* data, int size);
+	BdfNamedList(BdfLookupTable* lookupTable, BdfStringReader* sr);
+
 	virtual ~BdfNamedList();
-	int _serializeSeek();
-	int _serialize(char *data);
+	static BdfNamedList readHumanReadable(BdfLookupTable* lookupTable, char* data, int size);
 
+	void getLocationUses(int* locations);
+	int serializeSeeker(int* locations);
+	int serialize(char *data, int* locations);
 	void serializeHumanReadable(std::ostream &stream, BdfIndent indent, int upto);
-	void freeAll();
 
+	BdfObject* get(int key);
 	BdfObject* get(std::string key);
 	BdfNamedList* set(std::string key, BdfObject* value);
+	BdfNamedList* set(int key, BdfObject* value);
 	BdfObject* remove(std::string key);
-	std::vector<std::string> keys();
+	BdfObject* remove(int key);
+	std::vector<int> keys();
 	bool exists(std::string key);
+	bool exists(int key);
 };
 
 #endif /* BDFNAMEDLIST_H_ */

@@ -5,53 +5,104 @@
  *      Author: josua
  */
 
-#include "headers.h"
-#include "helpers.h"
+#include "Bdf.h"
+#include "BdfHelpers.h"
 #include <vector>
 #include <cstdint>
 #include <iostream>
 #include <string.h>
 
 
-BdfArray::BdfArray(char pData[], int pSize)
+BdfArray::BdfArray(BdfLookupTable* lookupTable, const char* data, int size)
 {
 	int i = 0;
 
-	while(true)
+	while(i < size)
 	{
-		if(i+4>pSize) {
-			break;
+		char object_size_tag;
+		BdfObject::getFlagData(data, NULL, &object_size_tag, NULL);
+
+		char object_size_bytes = BdfObject::getSizeBytes(object_size_tag);
+		
+		if(i + 1 + object_size_bytes > size) {
+			return;
 		}
 
-		// Get the size of the data
-		char* size_data_c = reverseIfLittleEndian(pData + i, 4);
-		int32_t size_data = *((int32_t*)size_data_c);
-		delete[] size_data_c;
-
-		// Move along memory
-		i += 4;
-
-		if(i+size_data > pSize) {
-			break;
+		// Get the size of the object
+		int object_size = BdfObject::getSize(data + i);
+	
+		if(object_size < 0 || i + object_size > size) {
+			return;
 		}
 
-		// Get the data
-		char* bytes_data = pData + i;
+		// Get the object
+		BdfObject* object = new BdfObject(lookupTable, data + i, object_size);
+		
+		// Add the object to the elements list
+		objects.push_back(object);
 
-		// Move along memory
-		i += size_data;
-
-		// Add the bdf object
-		objects.push_back(new BdfObject(bytes_data, size_data));
+		// Increase the iterator by the amount of bytes
+		i += object_size;
 	}
 }
 
-BdfArray::BdfArray() : BdfArray(new char[0], 0) {
+BdfArray::BdfArray(BdfLookupTable* lookupTable) : BdfArray(lookupTable, NULL, 0) {
 
 }
 
-BdfArray::~BdfArray() {
-	// TODO Auto-generated destructor stub
+BdfArray::BdfArray(BdfLookupTable* lookupTable, BdfStringReader* sr)
+{
+	sr->upto += 1;
+
+	// [..., ...]
+
+	try
+	{	
+		for(;;)
+		{
+			sr->ignoreBlanks();
+
+			if(sr->upto[0] == ']') {
+				sr->upto += 1;
+				return;
+			}
+
+			add(new BdfObject(lookupTable, sr));
+
+			// There should be a comma after this
+			sr->ignoreBlanks();
+
+			wchar_t c = sr->upto[0];
+	
+			if(c == ']') {
+				sr->upto += 1;
+				return;
+			}
+
+			if(c != ',') {
+				throw BdfError(BdfError::ERROR_SYNTAX, *sr);
+			}
+
+			sr->upto += 1;
+			sr->ignoreBlanks();
+		}
+	}
+
+	catch(BdfError e)
+	{
+		for(BdfObject* bdf : objects) {
+			delete bdf;
+		}
+
+		throw e;
+	}
+}
+
+BdfArray::~BdfArray()
+{
+	for(BdfObject* bdf : objects) {
+		delete bdf;
+	}
 }
 
 int BdfArray::size() {
@@ -84,36 +135,33 @@ BdfArray* BdfArray::clear() {
 	return this;
 }
 
-int BdfArray::_serializeSeek()
+void BdfArray::getLocationUses(int* locations)
+{
+	for(BdfObject* object : objects) {
+		object->getLocationUses(locations);
+	}
+}
+
+int BdfArray::serializeSeeker(int* locations)
 {
 	int size = 0;
 
 	for(BdfObject* object : objects) {
-		size += object->_serializeSeek();
-		size += 4;
+		size += object->serializeSeeker(locations);
 	}
 
 	return size;
 }
 
-int BdfArray::_serialize(char *data)
+int BdfArray::serialize(char *data, int* locations)
 {
-	int size = 0;
+	int pos = 0;
 
-	for(BdfObject* object : objects)
-	{
-		// Get the object
-		int32_t size_object = object->_serialize(data + size + 4);
-		char* size_object_c = reverseIfLittleEndian(&size_object, 4);
-
-		// Send back the object
-		memcpy(data + size, size_object_c, 4);
-		delete[] size_object_c;
-		size += size_object;
-		size += 4;
+	for(BdfObject* object : objects) {
+		pos += object->serialize(data + pos, locations, 0);
 	}
 
-	return size;
+	return pos;
 }
 
 void BdfArray::serializeHumanReadable(std::ostream &out, BdfIndent indent, int it)
@@ -125,7 +173,7 @@ void BdfArray::serializeHumanReadable(std::ostream &out, BdfIndent indent, int i
 
 	out << "[";
 
-	for(int i=0;i<objects.size();i++)
+	for(unsigned int i=0;i<objects.size();i++)
 	{
 		BdfObject *o = objects[i];
 
@@ -151,9 +199,4 @@ void BdfArray::serializeHumanReadable(std::ostream &out, BdfIndent indent, int i
 	out << "]";
 }
 
-void BdfArray::freeAll()
-{
-	for(BdfObject* bdf : objects) {
-		bdf->freeAll();
-	}
-}
+

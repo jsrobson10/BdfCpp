@@ -1,9 +1,3 @@
-/*
- * BdfIndent.h
- *
- *  Created on: 2 June 2020
- *      Author: josua
- */
 
 #ifndef BDFINDENT_H_
 #define BDFINDENT_H_

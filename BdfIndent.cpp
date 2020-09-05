@@ -1,9 +1,3 @@
-/*
- * BdfIndent.cpp
- *
- *  Created on: 2 June 2020
- *      Author: josua
- */
 
 #include "BdfIndent.h"
 

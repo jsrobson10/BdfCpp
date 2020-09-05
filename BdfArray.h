@@ -1,14 +1,9 @@
-/*
- * BdfArray.h
- *
- *  Created on: 31 May 2020
- *      Author: josua
- */
 
 #ifndef BDFARRAY_H_
 #define BDFARRAY_H_
 
-#include "headers.h"
+#include "Bdf.h"
+#include "BdfHelpers.h"
 #include <iostream>
 #include <vector>
 
@@ -18,21 +13,25 @@ private:
 	std::vector<BdfObject*> objects;
 
 public:
-	BdfArray();
-	BdfArray(char data[], int size);
+	BdfArray(BdfLookupTable* lookupTable);
+	BdfArray(BdfLookupTable* lookupTable, const char* data, int size);
+	BdfArray(BdfLookupTable* lookupTable, BdfStringReader* sr);
+	
 	virtual ~BdfArray();
-	int _serializeSeek();
-	int _serialize(char *data);
-	std::string serializeHumanReadable(BdfIndent indent, int upto);
-	BdfArray* add(BdfObject *o);
+
+	static BdfNamedList readHumanReadable(BdfLookupTable* lookupTable, char* data, int size);
+
+	void serializeHumanReadable(std::ostream &stream, BdfIndent indent, int upto);
+	void getLocationUses(int* locations);
+	int serializeSeeker(int* locations);
+	int serialize(char *data, int* locations);
+	
+	BdfArray* add(BdfObject* o);
 	BdfArray* clear();
 	BdfObject* remove(int index);
 	BdfObject* get(int index);
-	BdfArray* set(int index, BdfObject *o);
+	BdfArray* set(int index, BdfObject* o);
 	int size();
-
-	void serializeHumanReadable(std::ostream &stream, BdfIndent indent, int upto);
-	void freeAll();
 };
 
 #endif /* BDFARRAY_H_ */

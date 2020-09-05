@@ -1,43 +1,53 @@
-/*
- * bdfobject.h
- *
- *  Created on: 30 May 2020
- *      Author: josua
- */
 
 #ifndef BDFOBJECT_H_
 #define BDFOBJECT_H_
 
-#include "headers.h"
+#include "Bdf.h"
 #include <iostream>
 #include <string>
 
 class BdfObject
 {
-	private:
+private:
 
+	BdfLookupTable* lookupTable;
+	int last_seek;
 	void *object;
 	char type;
 	char *data;
 	int s;
 
-	public:
+	void freeAll();
 
-	BdfObject();
-	BdfObject(char *data, int size);
+public:
+
+	BdfObject(BdfLookupTable* lookupTable);
+	BdfObject(BdfLookupTable* lookupTable, const char *data, int size);
+	BdfObject(BdfLookupTable* lookupTable, BdfStringReader* sr);
+
 	virtual ~BdfObject();
 
-	char getType();
-	int _serializeSeek();
-	int _serialize(char *data);
-	int serialize(char **data);
+	static BdfNamedList readHumanReadable(BdfLookupTable* lookupTable, char* data, int size);
 
+	char getType();
+	void getLocationUses(int* locations);
+	int serializeSeeker(int* locations);
+	int serialize(char* data, int* locations, unsigned char flags);
 	void serializeHumanReadable(std::ostream &stream, BdfIndent indent, int upto);
-	void serializeHumanReadable(std::ostream &stream, BdfIndent indent);
-	void serializeHumanReadable(std::ostream &stream);
-	std::string serializeHumanReadable(BdfIndent indent);
-	std::string serializeHumanReadable();
-	void freeAll();
+
+	static void getFlagData(const char* data, char* type, char* size_bytes, char* parent_flags);
+	static char getSizeBytes(char size_bytes);
+	static int getSize(const char* data);
+	
+	int getKeyLocation(std::string key);
+	std::string getKeyName(int key);
+
+	BdfObject* newObject();
+	BdfNamedList* newNamedList();
+	BdfArray* newArray();
+
+	BdfObject* setAutoInt(long v);
+	long getAutoInt();
 
 	// Get
 
@@ -51,13 +61,13 @@ class BdfObject
 	float getFloat();
 
 	// Arrays
-	int getIntegerArray(int32_t **v);
-	int getBooleanArray(bool **v);
- 	int getLongArray(int64_t **v);
- 	int getShortArray(int16_t **v);
- 	int getByteArray(char **v);
-	int getDoubleArray(double **v);
-	int getFloatArray(float **v);
+	void getIntegerArray(int32_t **v, int* s);
+	void getBooleanArray(bool **v, int* s);
+ 	void getLongArray(int64_t **v, int* s);
+ 	void getShortArray(int16_t **v, int* s);
+ 	void getByteArray(char **v, int* s);
+	void getDoubleArray(double **v, int* s);
+	void getFloatArray(float **v, int* s);
 
 	// Objects
 	std::string getString();
@@ -76,13 +86,13 @@ class BdfObject
 	BdfObject* setFloat(float v);
 
 	// Arrays
-	BdfObject* setIntegerArray(int32_t *v, int size);
-	BdfObject* setBooleanArray(bool *v, int size);
- 	BdfObject* setLongArray(int64_t *v, int size);
- 	BdfObject* setShortArray(int16_t *v, int size);
- 	BdfObject* setByteArray(char *v, int size);
-	BdfObject* setDoubleArray(double *v, int size);
-	BdfObject* setFloatArray(float *v, int size);
+	BdfObject* setIntegerArray(const int32_t *v, int size);
+	BdfObject* setBooleanArray(const bool *v, int size);
+ 	BdfObject* setLongArray(const int64_t *v, int size);
+ 	BdfObject* setShortArray(const int16_t *v, int size);
+ 	BdfObject* setByteArray(const char *v, int size);
+	BdfObject* setDoubleArray(const double *v, int size);
+	BdfObject* setFloatArray(const float *v, int size);
 
 	// Objects
 	BdfObject* setString(std::string v);
