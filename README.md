@@ -214,15 +214,17 @@ for comments.
 		They have a character at the end
 		to say what type they are.
 		
-		They can be:
-			- I: Integer
-			- S: Short
-			- L: Long
-			- B: Byte
-			- D: Double
-			- F: Float
+		The tag at the end can be:
+			- I: Integer - a value between -2^31 and 2^31 - 1
+			- S: Short - a value between -32768 and 32767
+			- L: Long - a value between -2^63 and 2^63 - 1
+			- B: Byte - a value between -128 and 127
+			- D: Double - has 15 decimal digits of precision
+			- F: Float - has 7 decimal digits of precision
 	*/
 	"number": 42I,
+	"byte": -23B,
+	"decimal": 73.5D,
 
 	/*
 		This is a boolean. It can
@@ -247,7 +249,7 @@ for comments.
 	*/
 	"intArray": int (
 		64I, 42I, 63I,
-		22I, 96I, 12I,
+		22I, 96I, -12I,
 	),
 
 	/*
