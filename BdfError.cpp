@@ -86,6 +86,6 @@ int BdfError::getType() {
 	return type;
 }
 
-/*const char* BdfError::what() const throw() {
+const char* BdfError::what() const throw() {
 	return message.c_str();
-}*/
+}

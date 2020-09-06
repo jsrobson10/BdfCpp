@@ -1233,7 +1233,7 @@ std::string BdfObject::getString()
 	else
 	{
 		freeAll();
-		*v = "";
+		v = new std::string();
 	}
 
 	type = BdfTypes::STRING;

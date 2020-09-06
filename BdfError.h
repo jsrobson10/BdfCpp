@@ -5,7 +5,7 @@
 #include "BdfStringReader.h"
 #include <string>
 
-class BdfError
+class BdfError : public std::exception
 {
 private:
 	std::string error_short;
@@ -24,7 +24,7 @@ public:
 	std::string getError();
 	int getType();
 
-	//virtual const char* what() const throw();
+	virtual const char* what() const throw();
 };
 
 #endif
