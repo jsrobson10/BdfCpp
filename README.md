@@ -253,6 +253,19 @@ for comments.
 	),
 
 	/*
+		The double and float types support
+		Infinity, -Infinity, and NaN.
+		
+		They also support both really
+		high and really low value numbers.
+	*/
+	"doubleArray": double (
+		42.5D, -20D, 400D,
+		NaND, -InfinityD, InfinityD,
+		5.3e-200F, 4e+500F, 2.2e200F,
+	)
+
+	/*
 		Arrays are enclosed by an opening
 		tag and a closing tag [   ]
 		

@@ -13,7 +13,7 @@ DEB_PATH_COPYRIGHT=$(DEB_PATH)/DEBIAN/copyright
 
 build: $(COMPILE) $(CFLAGS)
 	$(CC) $(COMPILE) -shared -o $(OUT) $(CARGS)
-	[ -d libbdf.so ] || ln -s libbdf.so.0 libbdf.so
+	ln -s libbdf.so.0 libbdf.so || true
 
 build-deb: build
 	cd tools && make
@@ -40,7 +40,7 @@ build-deb: build
 	
 	cp *.h $(DEB_PATH)/usr/include/bdf
 	cp $(OUT) $(DEB_PATH)/usr/lib
-	[ -d $(DEB_PATH)/usr/lib/libbdf.so.0 ] || cd $(DEB_PATH)/usr/lib && ln -s $(OUT) libbdf.so
+	cd $(DEB_PATH)/usr/lib && ln -s $(OUT) libbdf.so || true
 	find ./tools \( ! -name "*.cpp" \) \( ! -name "Makefile" \) -type f -exec cp {} $(DEB_PATH)/usr/bin ";"
 	chmod -R 755 $(DEB_PATH)
 	dpkg-deb --build $(DEB_PATH)

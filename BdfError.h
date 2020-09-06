@@ -18,6 +18,7 @@ public:
 	static const int ERROR_END_OF_FILE = 1;
 	static const int ERROR_UNESCAPED_COMMENT = 2;
 	static const int ERROR_UNESCAPED_STRING = 3;
+	static const int ERROR_OUT_OF_RANGE = 4;
 
 	BdfError(const int code, BdfStringReader reader);
 	std::string getErrorShort();

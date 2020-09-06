@@ -7,11 +7,12 @@
 #include <codecvt>
 #include <locale>
 
-const std::string ERRORS[4] = {
+const std::string ERRORS[5] = {
 	"Syntax error",
 	"End of file",
 	"Unescaped comment",
 	"Unescaped string",
+	"Number out of range",
 };
 
 BdfError::BdfError(const int code, BdfStringReader reader)

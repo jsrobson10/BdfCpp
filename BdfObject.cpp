@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string.h>
 #include <sstream>
+#include <math.h>
 
 bool shouldStoreSize(char b) {
 	return b > 7;
@@ -204,6 +205,7 @@ BdfObject::BdfObject(BdfLookupTable* pLookupTable, BdfStringReader* sr)
 		return;
 	}
 
+	bool isDecimalArray = false;
 	bool isPrimitiveArray = false;
 	char type = 0;
 
@@ -235,11 +237,13 @@ BdfObject::BdfObject(BdfLookupTable* pLookupTable, BdfStringReader* sr)
 	else if(sr->isNext(L"double")) {
 		type = BdfTypes::ARRAY_DOUBLE;
 		isPrimitiveArray = true;
+		isDecimalArray = true;
 	}
 
 	else if(sr->isNext(L"float")) {
 		type = BdfTypes::ARRAY_FLOAT;
 		isPrimitiveArray = true;
+		isDecimalArray = true;
 	}
 
 	// Deserialize a primitive array
@@ -265,7 +269,12 @@ BdfObject::BdfObject(BdfLookupTable* pLookupTable, BdfStringReader* sr)
 				break;
 			}
 
-			if(sr2.isNext(L"true") || sr2.isNext(L"false")) {
+			if(
+					sr2.isNext(L"true") || sr2.isNext(L"false") ||
+					sr2.isNext(L"infinityf") || sr2.isNext(L"-infinityf") ||
+					sr2.isNext(L"infinityd") || sr2.isNext(L"-infinityd") ||
+					sr2.isNext(L"nanf") || sr2.isNext(L"nand") )
+			{
 				size += 1;
 			}
 
@@ -279,7 +288,11 @@ BdfObject::BdfObject(BdfLookupTable* pLookupTable, BdfStringReader* sr)
 						
 					c = sr2.upto[0];
 
-					if((c >= '0' && c <= '9') || c == '.' || c == 'e' || c == 'E' || c == '-') {
+					if(c >= 'a' && c <= 'z') {
+						c -= 32;
+					}
+
+					if((c >= '0' && c <= '9') || ((c == '.' || c == 'E') && isDecimalArray) || c == '-' || c == '+') {
 						sr2.upto += 1;
 						continue;
 					}
@@ -363,6 +376,72 @@ BdfObject::BdfObject(BdfLookupTable* pLookupTable, BdfStringReader* sr)
 				a[i] = false;
 			}
 
+			else if(sr->isNext(L"infinityd"))
+			{
+				if(type != BdfTypes::ARRAY_DOUBLE) {
+					freeTypedArray(array, type);
+					throw BdfError(BdfError::ERROR_SYNTAX, *sr);
+				}
+				
+				double* a = (double*)array;
+				a[i] = INFINITY;
+			}
+			
+			else if(sr->isNext(L"-infinityd"))
+			{
+				if(type != BdfTypes::ARRAY_DOUBLE) {
+					freeTypedArray(array, type);
+					throw BdfError(BdfError::ERROR_SYNTAX, *sr);
+				}
+				
+				double* a = (double*)array;
+				a[i] = -INFINITY;
+			}
+
+			else if(sr->isNext(L"nand"))
+			{
+				if(type != BdfTypes::ARRAY_DOUBLE) {
+					freeTypedArray(array, type);
+					throw BdfError(BdfError::ERROR_SYNTAX, *sr);
+				}
+
+				double* a = (double*)array;
+				a[i] = NAN;
+			}
+
+			else if(sr->isNext(L"infinityf"))
+			{
+				if(type != BdfTypes::ARRAY_FLOAT) {
+					freeTypedArray(array, type);
+					throw BdfError(BdfError::ERROR_SYNTAX, *sr);
+				}
+				
+				float* a = (float*)array;
+				a[i] = INFINITY;
+			}
+			
+			else if(sr->isNext(L"-infinityf"))
+			{
+				if(type != BdfTypes::ARRAY_FLOAT) {
+					freeTypedArray(array, type);
+					throw BdfError(BdfError::ERROR_SYNTAX, *sr);
+				}
+				
+				float* a = (float*)array;
+				a[i] = -INFINITY;
+			}
+
+			else if(sr->isNext(L"nanf"))
+			{
+				if(type != BdfTypes::ARRAY_FLOAT) {
+					freeTypedArray(array, type);
+					throw BdfError(BdfError::ERROR_SYNTAX, *sr);
+				}
+				
+				float* a = (float*)array;
+				a[i] = NAN;
+			}
+
 			else
 			{
 				// Parse a number
@@ -377,101 +456,119 @@ BdfObject::BdfObject(BdfLookupTable* pLookupTable, BdfStringReader* sr)
 						throw BdfError(BdfError::ERROR_END_OF_FILE, *sr);
 					}
 
-					if((c >= '0' && c <= '9') || c == '.' || c == 'E' || c == 'e' || c == '-') {
+					if(c >= 'a' && c <= 'z') {
+						c -= 32;
+					}
+
+					if((c >= '0' && c <= '9') || ((c == '.' || c == 'E') && isDecimalArray) || c == '-' || c == '+') {
 						sr->upto += 1;
 						number += c;
 						continue;
 					}
-
-					switch(c)
+					
+					try
 					{
-						case 'D':
+						switch(c)
 						{
-							if(type != BdfTypes::ARRAY_DOUBLE) {
-								freeTypedArray(array, type);
-								throw BdfError(BdfError::ERROR_SYNTAX, *sr);
+							case 'D':
+							{
+								if(type != BdfTypes::ARRAY_DOUBLE) {
+									freeTypedArray(array, type);
+									throw BdfError(BdfError::ERROR_SYNTAX, *sr);
+								}
+	
+								double* a = (double*) array;
+								a[i] = std::stod(number);
+	
+								sr->upto += 1;
+								break;
 							}
-
-							double* a = (double*) array;
-							a[i] = std::stod(number);
-
-							sr->upto += 1;
-							break;
+	
+							case 'F':
+							{
+								if(type != BdfTypes::ARRAY_FLOAT) {
+									freeTypedArray(array, type);
+									throw BdfError(BdfError::ERROR_SYNTAX, *sr);
+								}
+	
+								float* a = (float*) array;
+								a[i] = std::stof(number);
+	
+								sr->upto += 1;
+								break;
+							}
+	
+							case 'I':
+							{
+								if(type != BdfTypes::ARRAY_INTEGER) {
+									freeTypedArray(array, type);
+									throw BdfError(BdfError::ERROR_SYNTAX, *sr);
+								}
+	
+								int32_t* a = (int32_t*) array;
+								a[i] = (int32_t)std::stol(number);
+	
+								sr->upto += 1;
+								break;
+							}
+	
+							case 'L':
+							{
+								if(type != BdfTypes::ARRAY_LONG) {
+									freeTypedArray(array, type);
+									throw BdfError(BdfError::ERROR_SYNTAX, *sr);
+								}
+	
+								int64_t* a = (int64_t*) array;
+								a[i] = (int64_t)std::stol(number);
+	
+								sr->upto += 1;
+								break;
+							}
+	
+							case 'S':
+							{
+								if(type != BdfTypes::ARRAY_SHORT) {
+									freeTypedArray(array, type);
+									throw BdfError(BdfError::ERROR_SYNTAX, *sr);
+								}
+	
+								int16_t* a = (int16_t*) array;
+								a[i] = (int16_t)std::stoi(number);
+	
+								sr->upto += 1;
+								break;
+							}
+	
+							case 'B':
+							{
+								if(type != BdfTypes::ARRAY_BYTE) {
+									freeTypedArray(array, type);
+									throw BdfError(BdfError::ERROR_SYNTAX, *sr);
+								}
+	
+								char* a = (char*) array;
+								a[i] = (char)std::stoi(number);
+	
+								sr->upto += 1;
+								break;
+							}
+	
+							default:
+								freeTypedArray(array, type);
+								throw BdfError(BdfError::ERROR_SYNTAX, *sr);	
 						}
 
-						case 'F':
-						{
-							if(type != BdfTypes::ARRAY_FLOAT) {
-								freeTypedArray(array, type);
-								throw BdfError(BdfError::ERROR_SYNTAX, *sr);
-							}
+					}
 
-							float* a = (float*) array;
-							a[i] = std::stof(number);
+					catch(std::invalid_argument e) {
+						freeTypedArray(array, type);
+						throw BdfError(BdfError::ERROR_SYNTAX, sr->getPointer(-number.size()));
+					}
 
-							sr->upto += 1;
-							break;
-						}
-
-						case 'I':
-						{
-							if(type != BdfTypes::ARRAY_INTEGER) {
-								freeTypedArray(array, type);
-								throw BdfError(BdfError::ERROR_SYNTAX, *sr);
-							}
-
-							int32_t* a = (int32_t*) array;
-							a[i] = (int32_t)std::stol(number);
-
-							sr->upto += 1;
-							break;
-						}
-
-						case 'L':
-						{
-							if(type != BdfTypes::ARRAY_LONG) {
-								freeTypedArray(array, type);
-								throw BdfError(BdfError::ERROR_SYNTAX, *sr);
-							}
-
-							int64_t* a = (int64_t*) array;
-							a[i] = (int64_t)std::stol(number);
-
-							sr->upto += 1;
-							break;
-						}
-
-						case 'S':
-						{
-							if(type != BdfTypes::ARRAY_SHORT) {
-								freeTypedArray(array, type);
-								throw BdfError(BdfError::ERROR_SYNTAX, *sr);
-							}
-
-							int16_t* a = (int16_t*) array;
-							a[i] = (int16_t)std::stoi(number);
-
-							sr->upto += 1;
-							break;
-						}
-
-						case 'B':
-						{
-							if(type != BdfTypes::ARRAY_BYTE) {
-								freeTypedArray(array, type);
-								throw BdfError(BdfError::ERROR_SYNTAX, *sr);
-							}
-
-							char* a = (char*) array;
-							a[i] = (char)std::stoi(number);
-
-							sr->upto += 1;
-							break;
-						}
-
-						default:
-							freeTypedArray(array, type);
-							throw BdfError(BdfError::ERROR_SYNTAX, *sr);	
+					catch(std::out_of_range e) {
+						freeTypedArray(array, type);
+						throw BdfError(BdfError::ERROR_OUT_OF_RANGE, sr->getPointer(-number.size()));
 					}
 
 					break;
@@ -533,12 +630,44 @@ BdfObject::BdfObject(BdfLookupTable* pLookupTable, BdfStringReader* sr)
 		return;
 	}
 
+	if(sr->isNext(L"infinityd")) {
+		setDouble(INFINITY);
+		return;
+	}
+
+	if(sr->isNext(L"-infinityd")) {
+		setDouble(-INFINITY);
+		return;
+	}
+
+	if(sr->isNext(L"nand")) {
+		setDouble(NAN);
+		return;
+	}
+
+	if(sr->isNext(L"infinityf")) {
+		setFloat(INFINITY);
+		return;
+	}
+	
+	if(sr->isNext(L"-infinityf")) {
+		setFloat(-INFINITY);
+		return;
+	}
+	
+	if(sr->isNext(L"nanf")) {
+		setFloat(NAN);
+		return;
+	}
+
 	if(sr->isNext(L"undefined")) {
 		return;
 	}
 
 	// Parse a number
 	std::string number = "";
+
+	bool isDecimal = false;
 
 	for(;;)
 	{
@@ -549,34 +678,60 @@ BdfObject::BdfObject(BdfLookupTable* pLookupTable, BdfStringReader* sr)
 			throw BdfError(BdfError::ERROR_END_OF_FILE, *sr);
 		}
 
-		if((c >= '0' && c <= '9') || c == '.' || c == 'e' || c == 'E' || c == '-') {
+		if(c >= 'a' && c <= 'z') {
+			c -= 32;
+		}
+
+		if(c == '.' || c == 'E') {
+			isDecimal = true;
+			number += c;
+		}
+
+		if((c >= '0' && c <= '9') || c == '-' || c == '+') {
 			number += c;
 			continue;
 		}
-
-		switch(c)
+		
+		try
 		{
-			case 'D':
-				setDouble(std::stod(number));
-				return;
-			case 'F':
-				setFloat(std::stof(number));
-				return;
-			case 'I':
-				setInteger((int32_t)std::stol(number));
-				return;
-			case 'L':
-				setLong((int64_t)std::stol(number));
-				return;
-			case 'S':
-				setShort((int16_t)std::stoi(number));
-				return;
-			case 'B':
-				setByte((char)std::stoi(number));
-				return;
+			switch(c)
+			{
+				case 'D':
+					setDouble(std::stod(number));
+					return;
+				case 'F':
+					setFloat(std::stof(number));
+					return;
+				case 'I':
+					if(isDecimal) break;
+					setInteger((int32_t)std::stol(number));
+					return;
+				case 'L':
+					if(isDecimal) break;
+					setLong((int64_t)std::stol(number));
+					return;
+				case 'S':
+					if(isDecimal) break;
+					setShort((int16_t)std::stoi(number));
+					return;
+				case 'B':
+					if(isDecimal) break;
+					setByte((char)std::stoi(number));
+					return;
+				default:
+					throw BdfError(BdfError::ERROR_SYNTAX, *sr);
+			}
 		}
 
-		throw BdfError(BdfError::ERROR_SYNTAX, *sr);
+		catch(std::invalid_argument e) {
+			throw BdfError(BdfError::ERROR_SYNTAX, sr->getPointer(-number.size()));
+		}
+
+		catch(std::out_of_range e) {
+			throw BdfError(BdfError::ERROR_OUT_OF_RANGE, sr->getPointer(-number.size()));
+		}
+
+		throw BdfError(BdfError::ERROR_SYNTAX, sr->getPointer(-number.size()));
 	}
 }
 
@@ -768,6 +923,36 @@ std::string calcIndent(BdfIndent indent, int it)
 	return t;
 }
 
+void decimalToStream(std::ostream &out, double v)
+{
+	if(std::isnan(v)) {
+		out << "NaN";
+	}
+
+	else if(std::isinf(v)) {
+		out << ((v < 0) ? "-Infinity" : "Infinity");
+	}
+
+	else {
+		out << v;
+	}
+}
+
+void decimalToStream(std::ostream &out, float v)
+{
+	if(std::isnan(v)) {
+		out << "NaN";
+	}
+
+	else if(std::isinf(v)) {
+		out << ((v < 0) ? "-Infinity" : "Infinity");
+	}
+
+	else {
+		out << v;
+	}
+}
+
 void BdfObject::serializeHumanReadable(std::ostream &out, BdfIndent indent, int it)
 {
 	switch (type)
@@ -817,13 +1002,19 @@ void BdfObject::serializeHumanReadable(std::ostream &out, BdfIndent indent, int 
 			return;
 		}
 
-		case BdfTypes::DOUBLE: {
-			out << getDouble() << "D";
+		case BdfTypes::DOUBLE:
+		{
+			decimalToStream(out, getDouble());
+			out << "D";
+
 			return;
 		}
 
-		case BdfTypes::FLOAT: {
-			out << getFloat() << "F";
+		case BdfTypes::FLOAT:
+		{
+			decimalToStream(out, getFloat());
+			out << "F";
+
 			return;
 		}
 
@@ -932,8 +1123,14 @@ void BdfObject::serializeHumanReadable(std::ostream &out, BdfIndent indent, int 
 			int size;
 			getDoubleArray(&v, &size);
 
-			for(int i=0;i<size;i++) {
-				out << indent.breaker << calcIndent(indent, it) << v[i] << "D";
+			for(int i=0;i<size;i++)
+			{
+				out << indent.breaker << calcIndent(indent, it);
+				
+				decimalToStream(out, v[i]);
+				
+				out << "D";
+				
 				if(i != size - 1) out << ", ";
 			}
 
@@ -951,8 +1148,14 @@ void BdfObject::serializeHumanReadable(std::ostream &out, BdfIndent indent, int 
 			int size;
 			getFloatArray(&v, &size);
 
-			for(int i=0;i<size;i++) {
-				out << indent.breaker << calcIndent(indent, it) << v[i] << "F";
+			for(int i=0;i<size;i++)
+			{
+				out << indent.breaker << calcIndent(indent, it);
+				
+				decimalToStream(out, v[i]);
+				
+				out << "F";
+				
 				if(i != size - 1) out << ", ";
 			}
 
