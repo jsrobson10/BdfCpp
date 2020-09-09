@@ -1,9 +1,3 @@
-/*
- * BdfArray.cpp
- *
- *  Created on: 31 May 2020
- *      Author: josua
- */
 
 #include "Bdf.h"
 #include "BdfHelpers.h"
@@ -24,22 +18,19 @@ BdfArray::BdfArray(BdfLookupTable* lookupTable, const char* data, int size)
 
 		char object_size_bytes = BdfObject::getSizeBytes(object_size_tag);
 		
-		if(i + 1 + object_size_bytes > size) {
+		if(i + object_size_bytes >= size) {
 			return;
 		}
 
 		// Get the size of the object
 		int object_size = BdfObject::getSize(data + i);
 	
-		if(object_size < 0 || i + object_size > size) {
+		if(object_size <= 0 || i + object_size > size) {
 			return;
 		}
 
-		// Get the object
-		BdfObject* object = new BdfObject(lookupTable, data + i, object_size);
-		
 		// Add the object to the elements list
-		objects.push_back(object);
+		objects.push_back(new BdfObject(lookupTable, data + i, object_size));
 
 		// Increase the iterator by the amount of bytes
 		i += object_size;

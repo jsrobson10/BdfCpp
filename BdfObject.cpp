@@ -120,6 +120,12 @@ BdfObject::BdfObject(BdfLookupTable* pLookupTable, const char *pData, int pSize)
 			s -= size_bytes;
 		}
 
+		if(s < 0) {
+			type = BdfTypes::UNDEFINED;
+			s = 0;
+			return;
+		}
+
 		switch(type)
 		{
 			case BdfTypes::STRING:

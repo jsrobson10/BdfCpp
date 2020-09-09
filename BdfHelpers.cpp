@@ -103,50 +103,54 @@ std::string serializeString(std::string str)
 		return cv.to_bytes(serializeWString(cv.from_bytes(str)));
 	}
 
-	// Default to utf-8
-	catch(std::range_error e)
-	{
-		std::string str_new = "\"";
-
-		for(unsigned int i=0;i<str.size();i++)
-		{
-			char c = str[i];
-			
-			switch(c)
-			{
-				case '\n':
-					str_new += "\\n";
-					continue;
-				case '\t':
-					str_new += "\\t";
-					continue;
-				case '\r':
-					str_new += "\\r";
-					continue;
-				case '\\':
-					str_new += "\\\\";
-					continue;
-				case '"':
-					str_new += "\\\"";
-					continue;
-			}
-			
-			if(c < 0x20 || (c > 0x7e && c < 0xa1) || c == 0xad)
-			{
-				// Will the in the format \u0000
-				str_new += "\\u";
-				str_new += hex[(c & 0xf000) >> 12];
-				str_new += hex[(c & 0x0f00) >> 8];
-				str_new += hex[(c & 0x00f0) >> 4];
-				str_new += hex[(c & 0x000f)];
-				continue;
-			}
-	
-			str_new += c;
-		}
-	
-		return str_new + "\"";
+	catch(std::range_error e) {
 	}
+
+	catch(std::length_error e) {
+	}
+
+	// Default to utf-8
+	
+	std::string str_new = "\"";
+
+	for(unsigned int i=0;i<str.size();i++)
+	{
+		char c = str[i];
+		
+		switch(c)
+		{
+			case '\n':
+				str_new += "\\n";
+				continue;
+			case '\t':
+				str_new += "\\t";
+				continue;
+			case '\r':
+				str_new += "\\r";
+				continue;
+			case '\\':
+				str_new += "\\\\";
+				continue;
+			case '"':
+				str_new += "\\\"";
+				continue;
+		}
+		
+		if(c < 0x20 || (c > 0x7e && c < 0xa1) || c == 0xad)
+		{
+			// Will the in the format \u0000
+			str_new += "\\u";
+			str_new += hex[(c & 0xf000) >> 12];
+			str_new += hex[(c & 0x0f00) >> 8];
+			str_new += hex[(c & 0x00f0) >> 4];
+			str_new += hex[(c & 0x000f)];
+			continue;
+		}
+
+		str_new += c;
+	}
+
+	return str_new + "\"";
 }
 
 std::string toHex(char* data, int size)

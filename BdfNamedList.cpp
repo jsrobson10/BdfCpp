@@ -34,33 +34,18 @@ BdfNamedList::BdfNamedList(BdfLookupTable* pLookupTable, const char* data, int s
 		BdfObject::getFlagData(data + i, NULL, &bdf_size_bytes, &key_size_bytes);
 		key_size = BdfObject::getSizeBytes(key_size_bytes);
 
-		if(i + bdf_size + 1 > size) {
+		if(i + bdf_size >= size) {
 			return;
 		}
 
 		int object_size = BdfObject::getSize(data + i);
+		const char* object_data = data + i;
 
-		if(object_size < 0 || i + object_size > size) {
+		if(object_size <= 0 || i + object_size > size) {
 			return;
 		}
 
-		BdfObject* object = new BdfObject(lookupTable, data + i, object_size);
 		i += object_size;
-
-		switch(key_size_bytes)
-		{
-			case 2:
-				key_size = 1;
-				break;
-			case 1:
-				key_size = 2;
-				break;
-			case 0:
-				key_size = 4;
-				break;
-			default:
-				return;
-		}
 
 		// Get the key
 		int key = 0;
@@ -87,7 +72,7 @@ BdfNamedList::BdfNamedList(BdfLookupTable* pLookupTable, const char* data, int s
 		i += key_size;
 
 		// Add the list item
-		objects.push_back(ListObject(key, object));
+		objects.push_back(ListObject(key, new BdfObject(lookupTable, object_data, object_size)));
 	}
 }
 

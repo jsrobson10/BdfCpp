@@ -4,7 +4,7 @@ CFLAGS=BdfArray.h BdfNamedList.h BdfObject.h BdfTypes.h BdfIndent.h BdfReader.h 
 COMPILE=BdfArray.o BdfNamedList.o BdfObject.o BdfIndent.o BdfLookupTable.o BdfReader.o BdfHelpers.o BdfError.o BdfStringReader.o BdfReaderHuman.o
 OUT=libbdf.so.0
 
-DEB_VERSION=1.0
+DEB_VERSION=1.1
 DEB_ARCH=amd64
 
 DEB_PATH=libbdf-dev_$(DEB_VERSION)_$(DEB_ARCH)
@@ -25,18 +25,22 @@ build-deb: build
 	[ -d $(DEB_PATH)/usr/include/bdf ] || mkdir $(DEB_PATH)/usr/include/bdf
 	[ -d $(DEB_PATH)/usr/bin ] || mkdir $(DEB_PATH)/usr/bin
 	
-	echo "Package: libbdf-dev" > $(DEB_PATH_CONTROL)
-	echo "Version: $(DEB_VERSION)" >> $(DEB_PATH_CONTROL)
-	echo "Architecture: $(DEB_ARCH)"  >> $(DEB_PATH_CONTROL)
-	echo "Essential: no" >> $(DEB_PATH_CONTROL)
-	echo "Priority: optional" >> $(DEB_PATH_CONTROL)
-	echo "Depends: libbdf-dev, libboost-iostreams-dev" >> $(DEB_PATH_CONTROL)
-	echo "Maintainer: Josua Robson" >> $(DEB_PATH_CONTROL)
-	echo "Description: Used to read and write binary data format" >> $(DEB_PATH_CONTROL)
+	printf "\n\
+Package: libbdf-dev \n\
+Version: $(DEB_VERSION) \n\
+Architecture: $(DEB_ARCH) \n\
+Essential: no \n\
+Priority: optional \n\
+Depends: libbdf-dev, libboost-iostreams-dev \n\
+Maintainer: Josua Robson \n\
+Description: Load, save, and modify the structure for binary data format \n\
+" > $(DEB_PATH)/DEBIAN/control
 	
-	echo "Files: *" > $(DEB_PATH_COPYRIGHT)
-	echo "Copyright: 2020, Josua Robson" >> $(DEB_PATH_COPYRIGHT)
-	echo "License: MIT" >> $(DEB_PATH_COPYRIGHT)
+	printf "\n\
+Files: * \n\
+Copyright: 2020, Josua Robson \n\
+License: MIT \n\
+" > $(DEB_PATH)/DEBIAN/copyright
 	
 	cp *.h $(DEB_PATH)/usr/include/bdf
 	cp $(OUT) $(DEB_PATH)/usr/lib

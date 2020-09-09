@@ -32,23 +32,8 @@ BdfReader::BdfReader(const char* data, int size)
 	char bdf_size_bytes = 0;
 
 	BdfObject::getFlagData(data, NULL, &bdf_size_tag, &lookupTable_size_tag);
-	bdf_size_bytes = BdfObject::getSizeBytes(bdf_size_tag);
-
-	switch(lookupTable_size_tag)
-	{
-		case 0:
-			lookupTable_size_bytes = 4;
-			break;
-		case 1:
-			lookupTable_size_bytes = 2;
-			break;
-		case 2:
-			lookupTable_size_bytes = 1;
-			break;
-		default:
-			initEmpty();
-			return;
-	}
+	lookupTable_size_bytes = BdfObject::getSizeBytes(lookupTable_size_tag);
+	bdf_size_bytes = BdfObject::getSizeBytes(bdf_size_tag);	
 	
 	// Check if there is enough space
 	if(1 + lookupTable_size_bytes + bdf_size_bytes > size) {
@@ -60,7 +45,7 @@ BdfReader::BdfReader(const char* data, int size)
 	int bdf_size = BdfObject::getSize(data);
 	
 	// Check if there is enough space in the buffer
-	if(bdf_size < 0 || bdf_size + lookupTable_size_bytes > size) {
+	if(bdf_size <= 0 || bdf_size + lookupTable_size_bytes > size) {
 		initEmpty();
 		return;
 	}

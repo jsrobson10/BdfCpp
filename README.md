@@ -109,7 +109,7 @@ reader2->serializeHumanReadable(std::cout, BdfIndent("\t", "\n"));
 std::string data_hr = reader2->serializeHumanReadable(BdfIndent("\t", "\n"));
 
 // A reader object can be loaded from a human readable object
-BdfReaderHuman(data_hr);
+BdfReaderHuman reader3(data_hr);
 
 ```
 
@@ -155,17 +155,17 @@ BdfReader reader;
 BdfObject* bdf = reader->getObject();
 
 // New named list
-BdfNamedList* nl = bdf->newNamedList();
+BdfNamedList* list = bdf->newNamedList();
 
 // Set an element to the named list
-nl->set("key1", bdf->newObject()->setInteger(5));
+list->set("key1", bdf->newObject()->setInteger(5));
 
 // Use ids instead of strings for optimisation
 // if set/get is being called multiple times
 // on the same key.
 
 int key2 = bdf->getKeyLocation("key2");
-nl->set(key2, bdf->newObject()->setFloat(42.0F));
+list->set(key2, bdf->newObject()->setFloat(42.0F));
 
 // Get an elements value
 int v = list->get("key1")->getInteger();
