@@ -58,11 +58,11 @@ BdfArray::BdfArray(BdfLookupTable* lookupTable, BdfStringReader* sr)
 				return;
 			}
 
-			add(new BdfObject(lookupTable, sr));
+			BdfObject* bdf = new BdfObject(lookupTable, sr);
+			add(bdf);
 
 			// There should be a comma after this
 			sr->ignoreBlanks();
-
 			wchar_t c = sr->upto[0];
 	
 			if(c == ']') {
@@ -85,7 +85,7 @@ BdfArray::BdfArray(BdfLookupTable* lookupTable, BdfStringReader* sr)
 			delete bdf;
 		}
 
-		throw e;
+		throw;
 	}
 }
 

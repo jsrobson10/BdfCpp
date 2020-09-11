@@ -1,6 +1,6 @@
 
 FILES=bdfconvert bdfedit
-CARGS=-lbdf -lboost_iostreams -g -Wall -Werror -L ".."
+CARGS=-lbdf -lboost_iostreams -O3 -Wall -Werror -L ".."
 CC=g++
 
 build: $(FILES)

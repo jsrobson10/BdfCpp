@@ -14,9 +14,9 @@ DEB_PATH_COPYRIGHT=$(DEB_PATH)/DEBIAN/copyright
 build: $(COMPILE) $(CFLAGS)
 	$(CC) $(COMPILE) -shared -o $(OUT) $(CARGS)
 	ln -s libbdf.so.0 libbdf.so || true
+	cd tools && make
 
 build-deb: build
-	cd tools && make
 	[ -d $(DEB_PATH) ] || mkdir $(DEB_PATH)
 	[ -d $(DEB_PATH)/DEBIAN ] || mkdir $(DEB_PATH)/DEBIAN
 	[ -d $(DEB_PATH)/usr ] || mkdir $(DEB_PATH)/usr

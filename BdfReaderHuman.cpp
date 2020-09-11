@@ -24,7 +24,7 @@ BdfReaderHuman::BdfReaderHuman(std::wstring data)
 		if(e.getType() != BdfError::ERROR_END_OF_FILE)
 		{
 			delete bdfNew;
-			throw e;
+			throw;
 		}
 
 		delete bdf;

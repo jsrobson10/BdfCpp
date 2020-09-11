@@ -20,7 +20,8 @@ public:
 	void ignoreBlanks();
 	std::string getQuotedString();
 	bool isNext(std::wstring check);
-	bool isInteger();
+	void checkRange();
+	bool inRange();
 };
 
 #endif

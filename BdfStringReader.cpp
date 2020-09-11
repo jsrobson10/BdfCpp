@@ -27,10 +27,8 @@ void BdfStringReader::ignoreBlanks()
 {
 	for(;;)
 	{
-		if(upto >= end) {
-			throw BdfError(BdfError::ERROR_END_OF_FILE, *this);
-		}
-
+		checkRange();
+		
 		wchar_t c = upto[0];
 
 		// Comments
@@ -43,7 +41,7 @@ void BdfStringReader::ignoreBlanks()
 			{
 				for(;;)
 				{
-					if(upto >= end) {
+					if(!inRange()) {
 						break;
 					}
 
@@ -61,7 +59,7 @@ void BdfStringReader::ignoreBlanks()
 			{
 				for(;;)
 				{
-					if(upto >= end) {
+					if(!inRange()) {
 						throw BdfError(BdfError::ERROR_UNESCAPED_COMMENT, *this);
 					}
 
@@ -99,7 +97,7 @@ std::string BdfStringReader::getQuotedString()
 
 	for(;;)
 	{
-		if(upto >= end) {
+		if(!inRange()) {
 			throw BdfError(BdfError::ERROR_UNESCAPED_STRING, *this);
 		}
 		
@@ -184,6 +182,17 @@ std::string BdfStringReader::getQuotedString()
 	return cv.to_bytes(str);
 }
 
+void BdfStringReader::checkRange()
+{
+	if(upto >= end) {
+		throw BdfError(BdfError::ERROR_END_OF_FILE, *this);
+	}
+}
+
+bool BdfStringReader::inRange() {
+	return upto < end;
+}
+
 bool BdfStringReader::isNext(std::wstring check)
 {
 	if(check.size() + upto > end) {
@@ -203,34 +212,4 @@ bool BdfStringReader::isNext(std::wstring check)
 	upto += check.size();
 	
 	return true;
-}
-
-bool BdfStringReader::isInteger()
-{
-	for(const wchar_t* i=upto;i<end;i++)
-	{
-		wchar_t c = i[0];
-
-		switch(c)
-		{
-			case 'I': return true;
-			case 'S': return true;
-			case 'B': return true;
-			case 'L': return true;
-			case 'D': return false;
-			case 'F': return false;
-			case 'e': continue;
-			case 'E': continue;
-			case '.': continue;
-			case '-': continue;
-		}
-
-		if(c >= '0' && c <= '9') {
-			continue;
-		}
-
-		throw BdfError(BdfError::ERROR_SYNTAX, getPointer(i - upto));
-	}
-
-	throw BdfError(BdfError::ERROR_END_OF_FILE, *this);
 }

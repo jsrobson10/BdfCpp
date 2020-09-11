@@ -288,7 +288,7 @@ BdfObject::BdfObject(BdfLookupTable* pLookupTable, BdfStringReader* sr)
 			{
 				for(;;)
 				{
-					if(sr2.upto >= sr2.end) {
+					if(!sr2.inRange()) {
 						throw BdfError(BdfError::ERROR_END_OF_FILE, sr2.getPointer(-1));
 					}
 						
@@ -364,7 +364,7 @@ BdfObject::BdfObject(BdfLookupTable* pLookupTable, BdfStringReader* sr)
 			{
 				if(type != BdfTypes::ARRAY_BOOLEAN) {
 					freeTypedArray(array, type);
-					throw BdfError(BdfError::ERROR_SYNTAX, *sr);
+					throw BdfError(BdfError::ERROR_SYNTAX, sr->getPointer(-4));
 				}
 
 				bool* a = (bool*)array;
@@ -375,7 +375,7 @@ BdfObject::BdfObject(BdfLookupTable* pLookupTable, BdfStringReader* sr)
 			{
 				if(type != BdfTypes::ARRAY_BOOLEAN) {
 					freeTypedArray(array, type);
-					throw BdfError(BdfError::ERROR_SYNTAX, *sr);
+					throw BdfError(BdfError::ERROR_SYNTAX, sr->getPointer(-5));
 				}
 
 				bool* a = (bool*)array;
@@ -386,7 +386,7 @@ BdfObject::BdfObject(BdfLookupTable* pLookupTable, BdfStringReader* sr)
 			{
 				if(type != BdfTypes::ARRAY_DOUBLE) {
 					freeTypedArray(array, type);
-					throw BdfError(BdfError::ERROR_SYNTAX, *sr);
+					throw BdfError(BdfError::ERROR_SYNTAX, sr->getPointer(-9));
 				}
 				
 				double* a = (double*)array;
@@ -397,7 +397,7 @@ BdfObject::BdfObject(BdfLookupTable* pLookupTable, BdfStringReader* sr)
 			{
 				if(type != BdfTypes::ARRAY_DOUBLE) {
 					freeTypedArray(array, type);
-					throw BdfError(BdfError::ERROR_SYNTAX, *sr);
+					throw BdfError(BdfError::ERROR_SYNTAX, sr->getPointer(-10));
 				}
 				
 				double* a = (double*)array;
@@ -408,7 +408,7 @@ BdfObject::BdfObject(BdfLookupTable* pLookupTable, BdfStringReader* sr)
 			{
 				if(type != BdfTypes::ARRAY_DOUBLE) {
 					freeTypedArray(array, type);
-					throw BdfError(BdfError::ERROR_SYNTAX, *sr);
+					throw BdfError(BdfError::ERROR_SYNTAX, sr->getPointer(-4));
 				}
 
 				double* a = (double*)array;
@@ -419,7 +419,7 @@ BdfObject::BdfObject(BdfLookupTable* pLookupTable, BdfStringReader* sr)
 			{
 				if(type != BdfTypes::ARRAY_FLOAT) {
 					freeTypedArray(array, type);
-					throw BdfError(BdfError::ERROR_SYNTAX, *sr);
+					throw BdfError(BdfError::ERROR_SYNTAX, sr->getPointer(-9));
 				}
 				
 				float* a = (float*)array;
@@ -430,7 +430,7 @@ BdfObject::BdfObject(BdfLookupTable* pLookupTable, BdfStringReader* sr)
 			{
 				if(type != BdfTypes::ARRAY_FLOAT) {
 					freeTypedArray(array, type);
-					throw BdfError(BdfError::ERROR_SYNTAX, *sr);
+					throw BdfError(BdfError::ERROR_SYNTAX, sr->getPointer(-10));
 				}
 				
 				float* a = (float*)array;
@@ -441,7 +441,7 @@ BdfObject::BdfObject(BdfLookupTable* pLookupTable, BdfStringReader* sr)
 			{
 				if(type != BdfTypes::ARRAY_FLOAT) {
 					freeTypedArray(array, type);
-					throw BdfError(BdfError::ERROR_SYNTAX, *sr);
+					throw BdfError(BdfError::ERROR_SYNTAX, sr->getPointer(-4));
 				}
 				
 				float* a = (float*)array;
@@ -455,12 +455,12 @@ BdfObject::BdfObject(BdfLookupTable* pLookupTable, BdfStringReader* sr)
 
 				for(;;)
 				{
-					c = sr->upto[0];
-
-					if(sr->upto > sr->end) {
+					if(!sr->inRange()) {
 						freeTypedArray(array, type);
 						throw BdfError(BdfError::ERROR_END_OF_FILE, *sr);
 					}
+
+					c = sr->upto[0];
 
 					if(c >= 'a' && c <= 'z') {
 						c -= 32;
@@ -677,12 +677,12 @@ BdfObject::BdfObject(BdfLookupTable* pLookupTable, BdfStringReader* sr)
 
 	for(;;)
 	{
-		c = sr->upto[0];
-		sr->upto += 1;
-
-		if(sr->upto > sr->end) {
+		if(!sr->inRange()) {
 			throw BdfError(BdfError::ERROR_END_OF_FILE, *sr);
 		}
+
+		c = sr->upto[0];
+		sr->upto += 1;
 
 		if(c >= 'a' && c <= 'z') {
 			c -= 32;
@@ -691,6 +691,7 @@ BdfObject::BdfObject(BdfLookupTable* pLookupTable, BdfStringReader* sr)
 		if(c == '.' || c == 'E') {
 			isDecimal = true;
 			number += c;
+			continue;
 		}
 
 		if((c >= '0' && c <= '9') || c == '-' || c == '+') {

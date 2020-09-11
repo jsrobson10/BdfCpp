@@ -7,14 +7,13 @@
 #include <string.h>
 #include <iostream>
 
-
-ListObject::ListObject(int pKey, BdfObject* pObject) {
-	key = pKey;
-	object = pObject;
+BdfNamedListObject::~BdfNamedListObject() {
 }
 
-ListObject::~ListObject() {
-
+BdfNamedListObject::BdfNamedListObject(int pKey, BdfObject* pObject)
+{
+	object = pObject;
+	key = pKey;
 }
 
 BdfNamedList::BdfNamedList(BdfLookupTable* pLookupTable, const char* data, int size)
@@ -72,7 +71,7 @@ BdfNamedList::BdfNamedList(BdfLookupTable* pLookupTable, const char* data, int s
 		i += key_size;
 
 		// Add the list item
-		objects.push_back(ListObject(key, new BdfObject(lookupTable, object_data, object_size)));
+		objects.push_back(BdfNamedListObject(key, new BdfObject(lookupTable, object_data, object_size)));
 	}
 }
 
@@ -108,13 +107,15 @@ BdfNamedList::BdfNamedList(BdfLookupTable* pLookupTable, BdfStringReader* sr)
 			// There should be a colon after this
 			sr->ignoreBlanks();
 			if(sr->upto[0] != ':') {
+				std::cout << "ERROR: " << sr->upto[0] << "\n";
 				throw BdfError(BdfError::ERROR_SYNTAX, *sr);
 			}
 	
 			sr->upto += 1;
 			sr->ignoreBlanks();
 	
-			set(key, new BdfObject(lookupTable, sr));
+			BdfObject* bdf = new BdfObject(lookupTable, sr);
+			set(key, bdf);
 	
 			// There should be a comma after this
 			sr->ignoreBlanks();
@@ -136,15 +137,17 @@ BdfNamedList::BdfNamedList(BdfLookupTable* pLookupTable, BdfStringReader* sr)
 
 	catch(BdfError e)
 	{
-		for(ListObject o : objects) {
+		for(BdfNamedListObject o : objects) {
 			delete o.object;
 		}
+
+		throw;
 	}
 }
 
 BdfNamedList::~BdfNamedList()
 {
-	for(ListObject o : objects) {
+	for(BdfNamedListObject o : objects) {
 		delete o.object;
 	}
 }
@@ -189,7 +192,7 @@ BdfNamedList* BdfNamedList::set(int key, BdfObject* v)
 		}
 	}
 
-	objects.push_back(ListObject(key, v));
+	objects.push_back(BdfNamedListObject(key, v));
 
 	return this;
 }
@@ -234,7 +237,7 @@ int BdfNamedList::serializeSeeker(int* locations)
 {
 	int size = 0;
 
-	for(ListObject object : objects)
+	for(BdfNamedListObject object : objects)
 	{
 		int location = locations[object.key];
 
@@ -256,7 +259,7 @@ int BdfNamedList::serialize(char* data, int* locations)
 {
 	int pos = 0;
 
-	for(ListObject object : objects)
+	for(BdfNamedListObject object : objects)
 	{
 		int location = locations[object.key];
 
@@ -301,7 +304,7 @@ void BdfNamedList::serializeHumanReadable(std::ostream &out, BdfIndent indent, i
 
 	for(unsigned int i=0;i<objects.size();i++)
 	{
-		ListObject list_o = objects[i];
+		BdfNamedListObject list_o = objects[i];
 
 		out << indent.breaker;
 
@@ -330,7 +333,7 @@ void BdfNamedList::serializeHumanReadable(std::ostream &out, BdfIndent indent, i
 
 void BdfNamedList::getLocationUses(int* locations)
 {
-	for(ListObject object : objects) {
+	for(BdfNamedListObject object : objects) {
 		locations[object.key] += 1;
 		object.object->getLocationUses(locations);
 	}

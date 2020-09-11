@@ -7,21 +7,20 @@
 #include <vector>
 #include <string>
 
-class ListObject
+class BdfNamedListObject
 {
 public:
-
-	BdfObject *object;
+	BdfObject* object;
 	int key;
 
-	ListObject(int key, BdfObject* object);
-	virtual ~ListObject();
+	BdfNamedListObject(int key, BdfObject* object);
+	virtual ~BdfNamedListObject();
 };
 
 class BdfNamedList
 {
 private:
-	std::vector<ListObject> objects;
+	std::vector<BdfNamedListObject> objects;
 	BdfLookupTable* lookupTable;
 
 public:
