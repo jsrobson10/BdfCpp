@@ -11,22 +11,21 @@
 
 char hex[16] = {'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'};
 
-void reverseArray(void* to, const void* from, int size)
-{
-	for(int i=0;i<size;i++) {
-		*((char*)to + size - i - 1) = *((char*)from + i);
-	}
-}
-
 void reverseIfLittleEndian(void* to, const void* from, int size)
 {
 	#if IS_LITTLE_ENDIAN == 1
+
+	char* to_end = (char*)to + size - 1;
 	
-	reverseArray(to, from, size);
+	for(int i=0;i<size;i++) {
+		*(to_end - i) = *((char*)from + i);
+	}
 	
 	#elif IS_LITTLE_ENDIAN == 0
 
-	memcpy(to, from, size);
+	for(int i=0;i<size;i++) {
+		*((char*)to + i) = *((char*)from + i);
+	}
 	
 	#endif
 }
@@ -151,18 +150,4 @@ std::string serializeString(std::string str)
 	}
 
 	return str_new + "\"";
-}
-
-std::string toHex(char* data, int size)
-{
-  std::string r;
-
-  for(int i=0;i<size;i++) {
-    char c = data[i];
-    r += hex[c / 16];
-    r += hex[c % 16];
-    r += " ";
-  }
-
-  return r;
 }

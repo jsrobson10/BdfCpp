@@ -15,7 +15,7 @@ const std::string ERRORS[5] = {
 	"Number out of range",
 };
 
-BdfError::BdfError(const int code, BdfStringReader reader)
+BdfError::BdfError(const int code, BdfStringReader reader, int length)
 {
 	type = code;
 		
@@ -72,7 +72,13 @@ BdfError::BdfError(const int code, BdfStringReader reader)
 	message  = error_short + "\n";
 	message += cv.to_bytes(std::wstring(start_of_line, line_size)) + "\n";
 	message += spacer;
-	message += "^";
+
+	for(int i=0;i<length;i++) {
+		message += "^";
+	}
+}
+
+BdfError::BdfError(const int code, BdfStringReader reader) : BdfError(code, reader, 1) {
 }
 
 std::string BdfError::getErrorShort() {

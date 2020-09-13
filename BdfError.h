@@ -20,6 +20,7 @@ public:
 	static const int ERROR_UNESCAPED_STRING = 3;
 	static const int ERROR_OUT_OF_RANGE = 4;
 
+	BdfError(const int code, BdfStringReader reader, int length);
 	BdfError(const int code, BdfStringReader reader);
 	std::string getErrorShort();
 	std::string getError();

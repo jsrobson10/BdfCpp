@@ -4,7 +4,7 @@ CFLAGS=BdfArray.h BdfNamedList.h BdfObject.h BdfTypes.h BdfIndent.h BdfReader.h 
 COMPILE=BdfArray.o BdfNamedList.o BdfObject.o BdfIndent.o BdfLookupTable.o BdfReader.o BdfHelpers.o BdfError.o BdfStringReader.o BdfReaderHuman.o
 OUT=libbdf.so.0
 
-DEB_VERSION=1.1
+DEB_VERSION=1.2
 DEB_ARCH=amd64
 
 DEB_PATH=libbdf-dev_$(DEB_VERSION)_$(DEB_ARCH)

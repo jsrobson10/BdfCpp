@@ -364,7 +364,7 @@ BdfObject::BdfObject(BdfLookupTable* pLookupTable, BdfStringReader* sr)
 			{
 				if(type != BdfTypes::ARRAY_BOOLEAN) {
 					freeTypedArray(array, type);
-					throw BdfError(BdfError::ERROR_SYNTAX, sr->getPointer(-4));
+					throw BdfError(BdfError::ERROR_SYNTAX, sr->getPointer(-4), 4);
 				}
 
 				bool* a = (bool*)array;
@@ -375,7 +375,7 @@ BdfObject::BdfObject(BdfLookupTable* pLookupTable, BdfStringReader* sr)
 			{
 				if(type != BdfTypes::ARRAY_BOOLEAN) {
 					freeTypedArray(array, type);
-					throw BdfError(BdfError::ERROR_SYNTAX, sr->getPointer(-5));
+					throw BdfError(BdfError::ERROR_SYNTAX, sr->getPointer(-5), 5);
 				}
 
 				bool* a = (bool*)array;
@@ -386,7 +386,7 @@ BdfObject::BdfObject(BdfLookupTable* pLookupTable, BdfStringReader* sr)
 			{
 				if(type != BdfTypes::ARRAY_DOUBLE) {
 					freeTypedArray(array, type);
-					throw BdfError(BdfError::ERROR_SYNTAX, sr->getPointer(-9));
+					throw BdfError(BdfError::ERROR_SYNTAX, sr->getPointer(-9), 9);
 				}
 				
 				double* a = (double*)array;
@@ -397,7 +397,7 @@ BdfObject::BdfObject(BdfLookupTable* pLookupTable, BdfStringReader* sr)
 			{
 				if(type != BdfTypes::ARRAY_DOUBLE) {
 					freeTypedArray(array, type);
-					throw BdfError(BdfError::ERROR_SYNTAX, sr->getPointer(-10));
+					throw BdfError(BdfError::ERROR_SYNTAX, sr->getPointer(-10), 10);
 				}
 				
 				double* a = (double*)array;
@@ -408,7 +408,7 @@ BdfObject::BdfObject(BdfLookupTable* pLookupTable, BdfStringReader* sr)
 			{
 				if(type != BdfTypes::ARRAY_DOUBLE) {
 					freeTypedArray(array, type);
-					throw BdfError(BdfError::ERROR_SYNTAX, sr->getPointer(-4));
+					throw BdfError(BdfError::ERROR_SYNTAX, sr->getPointer(-4), 4);
 				}
 
 				double* a = (double*)array;
@@ -419,7 +419,7 @@ BdfObject::BdfObject(BdfLookupTable* pLookupTable, BdfStringReader* sr)
 			{
 				if(type != BdfTypes::ARRAY_FLOAT) {
 					freeTypedArray(array, type);
-					throw BdfError(BdfError::ERROR_SYNTAX, sr->getPointer(-9));
+					throw BdfError(BdfError::ERROR_SYNTAX, sr->getPointer(-9), 9);
 				}
 				
 				float* a = (float*)array;
@@ -430,7 +430,7 @@ BdfObject::BdfObject(BdfLookupTable* pLookupTable, BdfStringReader* sr)
 			{
 				if(type != BdfTypes::ARRAY_FLOAT) {
 					freeTypedArray(array, type);
-					throw BdfError(BdfError::ERROR_SYNTAX, sr->getPointer(-10));
+					throw BdfError(BdfError::ERROR_SYNTAX, sr->getPointer(-10), 10);
 				}
 				
 				float* a = (float*)array;
@@ -441,7 +441,7 @@ BdfObject::BdfObject(BdfLookupTable* pLookupTable, BdfStringReader* sr)
 			{
 				if(type != BdfTypes::ARRAY_FLOAT) {
 					freeTypedArray(array, type);
-					throw BdfError(BdfError::ERROR_SYNTAX, sr->getPointer(-4));
+					throw BdfError(BdfError::ERROR_SYNTAX, sr->getPointer(-4), 4);
 				}
 				
 				float* a = (float*)array;
@@ -569,12 +569,12 @@ BdfObject::BdfObject(BdfLookupTable* pLookupTable, BdfStringReader* sr)
 
 					catch(std::invalid_argument e) {
 						freeTypedArray(array, type);
-						throw BdfError(BdfError::ERROR_SYNTAX, sr->getPointer(-number.size()));
+						throw BdfError(BdfError::ERROR_SYNTAX, sr->getPointer(-number.size()), number.size() + 1);
 					}
 
 					catch(std::out_of_range e) {
 						freeTypedArray(array, type);
-						throw BdfError(BdfError::ERROR_OUT_OF_RANGE, sr->getPointer(-number.size()));
+						throw BdfError(BdfError::ERROR_OUT_OF_RANGE, sr->getPointer(-number.size()), number.size() + 1);
 					}
 
 					break;
@@ -726,19 +726,19 @@ BdfObject::BdfObject(BdfLookupTable* pLookupTable, BdfStringReader* sr)
 					setByte((char)std::stoi(number));
 					return;
 				default:
-					throw BdfError(BdfError::ERROR_SYNTAX, *sr);
+					throw BdfError(BdfError::ERROR_SYNTAX, sr->getPointer(-1));
 			}
 		}
 
 		catch(std::invalid_argument e) {
-			throw BdfError(BdfError::ERROR_SYNTAX, sr->getPointer(-number.size()));
+			throw BdfError(BdfError::ERROR_SYNTAX, sr->getPointer(-number.size() - 1), number.size() + 1);
 		}
 
 		catch(std::out_of_range e) {
-			throw BdfError(BdfError::ERROR_OUT_OF_RANGE, sr->getPointer(-number.size()));
+			throw BdfError(BdfError::ERROR_OUT_OF_RANGE, sr->getPointer(-number.size() - 1), number.size() + 1);
 		}
 
-		throw BdfError(BdfError::ERROR_SYNTAX, sr->getPointer(-number.size()));
+		throw BdfError(BdfError::ERROR_SYNTAX, *sr);
 	}
 }
 
