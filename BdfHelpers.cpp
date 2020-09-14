@@ -102,10 +102,10 @@ std::string serializeString(std::string str)
 		return cv.to_bytes(serializeWString(cv.from_bytes(str)));
 	}
 
-	catch(std::range_error e) {
+	catch(std::range_error &e) {
 	}
 
-	catch(std::length_error e) {
+	catch(std::length_error &e) {
 	}
 
 	// Default to utf-8

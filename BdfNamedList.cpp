@@ -135,7 +135,7 @@ BdfNamedList::BdfNamedList(BdfLookupTable* pLookupTable, BdfStringReader* sr)
 		}
 	}
 
-	catch(BdfError e)
+	catch(BdfError &e)
 	{
 		for(BdfNamedListObject o : objects) {
 			delete o.object;

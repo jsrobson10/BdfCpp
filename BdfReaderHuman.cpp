@@ -19,7 +19,7 @@ BdfReaderHuman::BdfReaderHuman(std::wstring data)
 		sr.ignoreBlanks();
 	}
 
-	catch(BdfError e)
+	catch(BdfError &e)
 	{
 		if(e.getType() != BdfError::ERROR_END_OF_FILE)
 		{

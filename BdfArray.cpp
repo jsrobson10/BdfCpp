@@ -79,7 +79,7 @@ BdfArray::BdfArray(BdfLookupTable* lookupTable, BdfStringReader* sr)
 		}
 	}
 
-	catch(BdfError e)
+	catch(BdfError &e)
 	{
 		for(BdfObject* bdf : objects) {
 			delete bdf;

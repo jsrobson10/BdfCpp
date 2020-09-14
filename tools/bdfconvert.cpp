@@ -80,7 +80,7 @@ int main(int argc, char** argv)
 			}
 		}
 
-		catch(std::exception e)
+		catch(std::exception &e)
 		{
 			reader = new BdfReader();
 

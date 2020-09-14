@@ -91,7 +91,7 @@ BdfReader* editFile(std::string path)
 		return new BdfReaderHuman(ss.str());
 	}
 
-	catch(BdfError e) {
+	catch(BdfError &e) {
 		onError(e);
 		return NULL;
 	}
@@ -159,7 +159,7 @@ int main(int argc, char** argv)
 			reader = new BdfReaderHuman(ss.str());
 		}
 
-		catch(BdfError e) {
+		catch(BdfError &e) {
 			reader = new BdfReader();
 		}
 

@@ -4,7 +4,7 @@ CFLAGS=BdfArray.h BdfNamedList.h BdfObject.h BdfTypes.h BdfIndent.h BdfReader.h 
 COMPILE=BdfArray.o BdfNamedList.o BdfObject.o BdfIndent.o BdfLookupTable.o BdfReader.o BdfHelpers.o BdfError.o BdfStringReader.o BdfReaderHuman.o
 OUT=libbdf.so.0
 
-DEB_VERSION=1.2
+DEB_VERSION=1.3
 DEB_ARCH=amd64
 
 DEB_PATH=libbdf-dev_$(DEB_VERSION)_$(DEB_ARCH)
@@ -31,7 +31,7 @@ Version: $(DEB_VERSION) \n\
 Architecture: $(DEB_ARCH) \n\
 Essential: no \n\
 Priority: optional \n\
-Depends: libbdf-dev, libboost-iostreams-dev \n\
+Depends: libbdf-dev, libboost-iostreams1.71.0 \n\
 Maintainer: Josua Robson \n\
 Description: Load, save, and modify the structure for binary data format \n\
 " > $(DEB_PATH)/DEBIAN/control

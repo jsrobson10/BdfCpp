@@ -567,12 +567,12 @@ BdfObject::BdfObject(BdfLookupTable* pLookupTable, BdfStringReader* sr)
 
 					}
 
-					catch(std::invalid_argument e) {
+					catch(std::invalid_argument &e) {
 						freeTypedArray(array, type);
 						throw BdfError(BdfError::ERROR_SYNTAX, sr->getPointer(-number.size()), number.size() + 1);
 					}
 
-					catch(std::out_of_range e) {
+					catch(std::out_of_range &e) {
 						freeTypedArray(array, type);
 						throw BdfError(BdfError::ERROR_OUT_OF_RANGE, sr->getPointer(-number.size()), number.size() + 1);
 					}
@@ -730,11 +730,11 @@ BdfObject::BdfObject(BdfLookupTable* pLookupTable, BdfStringReader* sr)
 			}
 		}
 
-		catch(std::invalid_argument e) {
+		catch(std::invalid_argument &e) {
 			throw BdfError(BdfError::ERROR_SYNTAX, sr->getPointer(-number.size() - 1), number.size() + 1);
 		}
 
-		catch(std::out_of_range e) {
+		catch(std::out_of_range &e) {
 			throw BdfError(BdfError::ERROR_OUT_OF_RANGE, sr->getPointer(-number.size() - 1), number.size() + 1);
 		}
 
