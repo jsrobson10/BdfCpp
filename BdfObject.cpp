@@ -723,6 +723,7 @@ BdfObject::BdfObject(BdfLookupTable* pLookupTable, BdfStringReader* sr)
 					return;
 				case 'B':
 					if(isDecimal) break;
+					std::cout << "Byte is " << std::stoi(number) << "\n";
 					setByte((char)std::stoi(number));
 					return;
 				default:
@@ -1568,7 +1569,7 @@ BdfObject* BdfObject::setByte(char v)
 
 	s = sizeof(v);
 	type = BdfTypes::BYTE;
-	data = new char[1] {1};
+	data = new char[1] {v};
 	return this;
 }
 
