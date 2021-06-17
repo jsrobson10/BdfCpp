@@ -1,5 +1,5 @@
 
-#include <bdf/Bdf.h>
+#include <bdf/Bdf.hpp>
 
 #include <iostream>
 
@@ -20,11 +20,11 @@
 
 int main()
 {
-	BdfReader reader;
+	Bdf::BdfReader reader;
 
 	// Create a new named list and assign it to the reader object
-	BdfObject* bdf = reader.getObject();
-	BdfNamedList* nl = bdf->getNamedList();
+	Bdf::BdfObject* bdf = reader.getObject();
+	Bdf::BdfNamedList* nl = bdf->getNamedList();
 
 	// Set the "Hello" tag in the named list to a string
 	nl->set("Hello", bdf->newObject()->setString("World!"));

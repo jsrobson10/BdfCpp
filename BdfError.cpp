@@ -1,11 +1,13 @@
 
-#include "BdfStringReader.h"
-#include "BdfError.h"
+#include "BdfStringReader.hpp"
+#include "BdfError.hpp"
 
 #include <iostream>
 #include <string>
 #include <codecvt>
 #include <locale>
+
+using namespace Bdf;
 
 const std::string ERRORS[5] = {
 	"Syntax error",

@@ -1,17 +1,21 @@
 
-#include "Bdf.h"
-#include "BdfHelpers.h"
+#include "Bdf.hpp"
+#include "BdfHelpers.hpp"
 #include <cstdint>
 #include <vector>
 #include <string>
 #include <string.h>
 #include <iostream>
 
-BdfNamedListObject::~BdfNamedListObject() {
+using namespace Bdf;
+using namespace BdfHelpers;
+
+BdfNamedList::Item::~Item() {
 }
 
-BdfNamedListObject::BdfNamedListObject(int pKey, BdfObject* pObject)
+BdfNamedList::Item::Item(int pKey, BdfObject* pObject, Item* pNext)
 {
+	next = pNext;
 	object = pObject;
 	key = pKey;
 }
@@ -19,6 +23,8 @@ BdfNamedListObject::BdfNamedListObject(int pKey, BdfObject* pObject)
 BdfNamedList::BdfNamedList(BdfLookupTable* pLookupTable, const char* data, int size)
 {
 	lookupTable = pLookupTable;
+	start = NULL;
+	end = &start;
 
 	int i = 0;
 
@@ -71,7 +77,7 @@ BdfNamedList::BdfNamedList(BdfLookupTable* pLookupTable, const char* data, int s
 		i += key_size;
 
 		// Add the list item
-		objects.push_back(BdfNamedListObject(key, new BdfObject(lookupTable, object_data, object_size)));
+		set(key, new BdfObject(lookupTable, object_data, object_size));
 	}
 }
 
@@ -81,6 +87,9 @@ BdfNamedList::BdfNamedList(BdfLookupTable* lookupTable) : BdfNamedList(lookupTab
 
 BdfNamedList::BdfNamedList(BdfLookupTable* pLookupTable, BdfStringReader* sr)
 {
+	start = NULL;
+	end = &start;
+
 	lookupTable = pLookupTable;
 	sr->upto += 1;
 
@@ -137,28 +146,54 @@ BdfNamedList::BdfNamedList(BdfLookupTable* pLookupTable, BdfStringReader* sr)
 
 	catch(BdfError &e)
 	{
-		for(BdfNamedListObject o : objects) {
-			delete o.object;
-		}
-
+		clear();
+			
 		throw;
 	}
 }
 
 BdfNamedList::~BdfNamedList()
 {
-	for(BdfNamedListObject o : objects) {
-		delete o.object;
+	clear();
+}
+
+BdfNamedList* BdfNamedList::clear()
+{
+	Item* cur = this->start;
+	Item* next;
+
+	while(cur != NULL)
+	{
+		next = cur->next;
+
+		delete cur->object;
+		delete cur;
+
+		cur = next;
 	}
+
+	return this;
 }
 
 std::vector<int> BdfNamedList::keys()
 {
 	std::vector<int> keys;
-	keys.resize(objects.size());
+	Item* cur = this->start;
+	int size = 0;
 
-	for(unsigned int i=0;i<objects.size();i++) {
-		keys.push_back(objects[i].key);
+	while(cur != NULL)
+	{
+		size += 1;
+		cur = cur->next;
+	}
+
+	keys.resize(size);
+	cur = this->start;
+
+	while(cur != NULL)
+	{
+		keys.push_back(cur->key);
+		cur = cur->next;
 	}
 
 	return keys;
@@ -170,10 +205,16 @@ bool BdfNamedList::exists(std::string key) {
 
 bool BdfNamedList::exists(int key)
 {
-	for(unsigned int i=0;i<objects.size();i++) {
-		if(objects[i].key == key) {
+	Item* cur = this->start;
+
+	while(cur != NULL)
+	{
+		if(cur->key == key)
+		{
 			return true;
 		}
+
+		cur = cur->next;
 	}
 
 	return false;
@@ -185,14 +226,25 @@ BdfNamedList* BdfNamedList::set(std::string key, BdfObject* v) {
 
 BdfNamedList* BdfNamedList::set(int key, BdfObject* v)
 {
-	for(unsigned int i=0;i<objects.size();i++) {
-		if(objects[i].key == key) {
-			objects[i].object = v;
+	Item* cur = this->start;
+
+	while(cur != NULL)
+	{
+		if(cur->key == key)
+		{
+			delete cur->object;
+			cur->object = v;
+
 			return this;
 		}
+
+		cur = cur->next;
 	}
 
-	objects.push_back(BdfNamedListObject(key, v));
+	Item* item = new Item(key, v, NULL);
+
+	*this->end = item;
+	this->end = &item->next;
 
 	return this;
 }
@@ -203,16 +255,27 @@ BdfObject* BdfNamedList::remove(std::string key) {
 
 BdfObject* BdfNamedList::remove(int key)
 {
-	for(unsigned int i=0;i<objects.size();i++) {
-		if(objects[i].key == key)
+	Item** cur = &this->start;
+
+	while(*cur != NULL)
+	{
+		if((*cur)->key == key)
 		{
-			BdfObject* v = objects[i].object;
-			objects.erase(objects.begin() + i);
-			return v;
+			BdfObject* object = (*cur)->object;
+			Item* next = (*cur)->next;
+
+			delete (*cur)->object;
+			delete *cur;
+
+			*cur = next;
+
+			return object;
 		}
+
+		cur = &(*cur)->next;
 	}
 
-	return new BdfObject(lookupTable);
+	return NULL;
 }
 
 BdfObject* BdfNamedList::get(std::string key) {
@@ -221,10 +284,16 @@ BdfObject* BdfNamedList::get(std::string key) {
 
 BdfObject* BdfNamedList::get(int key)
 {
-	for(unsigned int i=0;i<objects.size();i++) {
-		if(objects[i].key == key) {
-			return objects[i].object;
+	Item* cur = this->start;
+
+	while(cur != NULL)
+	{
+		if(cur->key == key)
+		{
+			return cur->object;
 		}
+
+		cur = cur->next;
 	}
 
 	BdfObject* v = new BdfObject(lookupTable);
@@ -236,10 +305,11 @@ BdfObject* BdfNamedList::get(int key)
 int BdfNamedList::serializeSeeker(int* locations)
 {
 	int size = 0;
+	Item* cur = this->start;
 
-	for(BdfNamedListObject object : objects)
+	while(cur != NULL)
 	{
-		int location = locations[object.key];
+		int location = locations[cur->key];
 
 		if(location > 65535) {		// >= 2 ^ 16
 			size += 4;
@@ -249,7 +319,8 @@ int BdfNamedList::serializeSeeker(int* locations)
 			size += 1;
 		}
 
-		size += object.object->serializeSeeker(locations);
+		size += cur->object->serializeSeeker(locations);
+		cur = cur->next;
 	}
 
 	return size;
@@ -258,10 +329,11 @@ int BdfNamedList::serializeSeeker(int* locations)
 int BdfNamedList::serialize(char* data, int* locations)
 {
 	int pos = 0;
+	Item* cur = this->start;
 
-	for(BdfNamedListObject object : objects)
+	while(cur != NULL)
 	{
-		int location = locations[object.key];
+		int location = locations[cur->key];
 
 		char size_bytes_tag;
 		char size_bytes;
@@ -277,7 +349,7 @@ int BdfNamedList::serialize(char* data, int* locations)
 			size_bytes = 1;
 		}
 
-		int size = object.object->serialize(data + pos, locations, size_bytes_tag);
+		int size = cur->object->serialize(data + pos, locations, size_bytes_tag);
 		int offset = pos + size;
 
 		char bytes[4];
@@ -288,6 +360,7 @@ int BdfNamedList::serialize(char* data, int* locations)
 		}
 
 		pos += size + size_bytes;
+		cur = cur->next;
 	}
 
 	return pos;
@@ -295,30 +368,42 @@ int BdfNamedList::serialize(char* data, int* locations)
 
 void BdfNamedList::serializeHumanReadable(std::ostream &out, BdfIndent indent, int it)
 {
-	if(objects.size() == 0) {
+	if(this->start == NULL)
+	{
 		out << "{}";
+		
 		return;
 	}
 
 	out << "{";
 
-	for(unsigned int i=0;i<objects.size();i++)
+	Item* cur = this->start;
+
+	if(cur != NULL)
 	{
-		BdfNamedListObject list_o = objects[i];
-
-		out << indent.breaker;
-
-		for(int n=0;n<=it;n++) {
-			out << indent.indent;
-		}
-		
-		std::string name = lookupTable->getName(list_o.key);
-
-		out << serializeString(name) << ": ";
-		list_o.object->serializeHumanReadable(out, indent, it + 1);
-
-		if(objects.size() > i + 1) {
-			out << ", ";
+		for(;;)
+		{
+			out << indent.breaker;
+	
+			for(int n=0;n<=it;n++) {
+				out << indent.indent;
+			}
+			
+			std::string name = lookupTable->getName(cur->key);
+	
+			out << serializeString(name) << ": ";
+			cur->object->serializeHumanReadable(out, indent, it + 1);
+			cur = cur->next;
+	
+			if(cur != NULL)
+			{
+				out << ", ";
+			}
+	
+			else
+			{
+				break;
+			}
 		}
 	}
 
@@ -333,8 +418,12 @@ void BdfNamedList::serializeHumanReadable(std::ostream &out, BdfIndent indent, i
 
 void BdfNamedList::getLocationUses(int* locations)
 {
-	for(BdfNamedListObject object : objects) {
-		locations[object.key] += 1;
-		object.object->getLocationUses(locations);
+	Item* cur = this->start;
+
+	while(cur != NULL)
+	{
+		locations[cur->key] += 1;
+		cur->object->getLocationUses(locations);
+		cur = cur->next;
 	}
 }

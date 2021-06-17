@@ -3,7 +3,7 @@
 #define IS_LITTLE_ENDIAN 1
 #endif
 
-#include "BdfHelpers.h"
+#include "BdfHelpers.hpp"
 #include <string.h>
 #include <iostream>
 #include <codecvt>
@@ -11,7 +11,7 @@
 
 char hex[16] = {'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'};
 
-void reverseIfLittleEndian(void* to, const void* from, int size)
+void BdfHelpers::reverseIfLittleEndian(void* to, const void* from, int size)
 {
 	#if IS_LITTLE_ENDIAN == 1
 
@@ -92,7 +92,7 @@ std::wstring serializeWString(std::wstring str)
 	return str_new + L"\"";
 }
 
-std::string serializeString(std::string str)
+std::string BdfHelpers::serializeString(std::string str)
 {
 	// Try to convert to wide chars
 	try

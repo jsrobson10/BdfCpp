@@ -1,5 +1,5 @@
 
-#include "../Bdf.h"
+#include "../Bdf.hpp"
 
 #include <fstream>
 #include <iostream>
@@ -30,7 +30,7 @@ void help() {
 	std::cerr << "Usage: " << command << " [.bdf/.bdf.gz/.bdf.bz2/.hbdf] -m [none/human/bzip2/gzip]\n";
 }
 
-void onError(BdfError e) {
+void onError(Bdf::BdfError e) {
 	std::cerr << "Error while reading file: " << e.getError() << "\n";
 }
 
@@ -53,7 +53,7 @@ std::string endOfPath(std::string path)
 	return ending;
 }
 
-BdfReader* editFile(std::string path)
+Bdf::BdfReader* editFile(std::string path)
 {
 	int pid = fork();
 
@@ -88,10 +88,10 @@ BdfReader* editFile(std::string path)
 	delete[] buffer;
 
 	try {
-		return new BdfReaderHuman(ss.str());
+		return new Bdf::BdfReaderHuman(ss.str());
 	}
 
-	catch(BdfError &e) {
+	catch(Bdf::BdfError &e) {
 		onError(e);
 		return NULL;
 	}
@@ -99,7 +99,7 @@ BdfReader* editFile(std::string path)
 
 void editBinaryFile(std::string path, std::string str, char** data, int* data_size)
 {
-	BdfReader* reader = new BdfReader(str.c_str(), str.size());
+	Bdf::BdfReader* reader = new Bdf::BdfReader(str.c_str(), str.size());
 	
 	char tmpf_template[] = "/tmp/bdfeditXXXXXX";
 	std::string path_ending = endOfPath(path);
@@ -108,8 +108,8 @@ void editBinaryFile(std::string path, std::string str, char** data, int* data_si
 	std::ofstream tmpf_out(tmpf_path.c_str(), std::ios::out);
 	
 	// Show an empty file if the first objects type is undefined
-	if(reader->getObject()->getType() != BdfTypes::UNDEFINED) {
-		reader->serializeHumanReadable(tmpf_out, BdfIndent(indent, breaker));
+	if(reader->getObject()->getType() != Bdf::BdfTypes::UNDEFINED) {
+		reader->serializeHumanReadable(tmpf_out, Bdf::BdfIndent(indent, breaker));
 	}
 
 	tmpf_out.close();
@@ -153,32 +153,32 @@ int main(int argc, char** argv)
 		}
 
 		in.close();
-		BdfReader* reader;
+		Bdf::BdfReader* reader;
 		
 		try {
-			reader = new BdfReaderHuman(ss.str());
+			reader = new Bdf::BdfReaderHuman(ss.str());
 		}
 
-		catch(BdfError &e) {
-			reader = new BdfReader();
+		catch(Bdf::BdfError &e) {
+			reader = new Bdf::BdfReader();
 		}
 
-		BdfObject* bdf = reader->getObject();
-		BdfNamedList* nl = bdf->getNamedList();
+		Bdf::BdfObject* bdf = reader->getObject();
+		Bdf::BdfNamedList* nl = bdf->getNamedList();
 
-		if(nl->get("editor")->getType() == BdfTypes::STRING) {
+		if(nl->get("editor")->getType() == Bdf::BdfTypes::STRING) {
 			editor = nl->get("editor")->getString();
 		} else {
 			nl->get("editor")->setString(editor);
 		}
 
-		if(nl->get("indent")->getType() == BdfTypes::STRING) {
+		if(nl->get("indent")->getType() == Bdf::BdfTypes::STRING) {
 			indent = nl->get("indent")->getString();
 		} else {
 			nl->get("indent")->setString(indent);
 		}
 
-		if(nl->get("break")->getType() == BdfTypes::STRING) {
+		if(nl->get("break")->getType() == Bdf::BdfTypes::STRING) {
 			breaker = nl->get("break")->getString();
 		} else {
 			nl->get("break")->setString(breaker);
@@ -186,7 +186,7 @@ int main(int argc, char** argv)
 
 		std::ofstream out(file_settings.c_str(), std::ios::out);
 
-		reader->serializeHumanReadable(out, BdfIndent("\t", "\n"));
+		reader->serializeHumanReadable(out, Bdf::BdfIndent("\t", "\n"));
 		
 		delete reader;
 
@@ -444,7 +444,7 @@ int main(int argc, char** argv)
 
 	else if(mode == 2)
 	{
-		BdfReader* reader = editFile(path);
+		Bdf::BdfReader* reader = editFile(path);
 		
 		if(reader != NULL) {
 			delete reader;

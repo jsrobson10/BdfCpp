@@ -1,12 +1,14 @@
 
-#include "Bdf.h"
-#include "BdfHelpers.h"
+#include "Bdf.hpp"
+#include "BdfHelpers.hpp"
 #include <iostream>
 #include <string>
 #include <sstream>
 #include <codecvt>
 #include <locale>
 
+using namespace Bdf;
+using namespace BdfHelpers;
 
 BdfReaderHuman::BdfReaderHuman(std::wstring data)
 {

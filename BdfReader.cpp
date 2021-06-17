@@ -1,12 +1,14 @@
 
-#include "Bdf.h"
-#include "BdfHelpers.h"
+#include "Bdf.hpp"
+#include "BdfHelpers.hpp"
 #include <iostream>
 #include <string>
 #include <sstream>
 #include <codecvt>
 #include <locale>
 
+using namespace Bdf;
+using namespace BdfHelpers;
 
 void BdfReader::initEmpty()
 {
@@ -93,7 +95,7 @@ BdfReader::~BdfReader() {
 void BdfReader::serialize(char** pData, int* pSize)
 {
 	int locations_size = lookupTable->size();
-	int locations[locations_size];
+	int* locations = new int[locations_size];
 
 	lookupTable->serializeGetLocations(locations);
 
@@ -131,6 +133,8 @@ void BdfReader::serialize(char** pData, int* pSize)
 	}
 
 	lookupTable->serialize(data + lookupTable_size_bytes, locations, locations_size);
+
+	delete[] locations;
 }
 
 BdfObject* BdfReader::getObject() {

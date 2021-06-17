@@ -1,5 +1,5 @@
 
-#include "../Bdf.h"
+#include "../Bdf.hpp"
 #include <iterator>
 #include <iostream>
 #include <string>
@@ -52,7 +52,7 @@ int main(int argc, char** argv)
 	std::stringstream ss;
 
 	{
-		char* buffer = new char[1024];
+		char buffer[1024];
 		int size;
 
 		while((size = std::fread(buffer, 1, 1024, stdin)) > 0) {
@@ -65,24 +65,24 @@ int main(int argc, char** argv)
 	// Try different ways to read the data.
 	// It could be human readable or binary.
 
-	BdfReader* reader = new BdfReader(data_in.c_str(), data_in.size());
+	Bdf::BdfReader* reader = new Bdf::BdfReader(data_in.c_str(), data_in.size());
 
-	if(reader->getObject()->getType() == BdfTypes::UNDEFINED)
+	if(reader->getObject()->getType() == Bdf::BdfTypes::UNDEFINED)
 	{
 		try
 		{
 			delete reader;
 
-			reader = new BdfReaderHuman(data_in);
+			reader = new Bdf::BdfReaderHuman(data_in);
 
 			if(mode == "") {
 				mode = "binary";
 			}
 		}
 
-		catch(std::exception &e)
+		catch(Bdf::BdfError &e)
 		{
-			reader = new BdfReader();
+			reader = new Bdf::BdfReader();
 
 			if(mode == "") {
 				mode = "human";
@@ -108,7 +108,7 @@ int main(int argc, char** argv)
 	}
 
 	else if(mode == "human") {
-		reader->serializeHumanReadable(std::cout, BdfIndent(indent, breaker));
+		reader->serializeHumanReadable(std::cout, Bdf::BdfIndent(indent, breaker));
 	}
 
 	else {

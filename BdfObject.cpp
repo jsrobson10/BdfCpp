@@ -1,10 +1,13 @@
 
-#include "Bdf.h"
-#include "BdfHelpers.h"
+#include "Bdf.hpp"
+#include "BdfHelpers.hpp"
 #include <iostream>
 #include <string.h>
 #include <sstream>
 #include <math.h>
+
+using namespace Bdf;
+using namespace BdfHelpers;
 
 bool shouldStoreSize(char b) {
 	return b > 7;
@@ -131,8 +134,8 @@ BdfObject::BdfObject(BdfLookupTable* pLookupTable, const char *pData, int pSize)
 			case BdfTypes::STRING:
 				object = new std::string(oData, s);
 				break;
-			case BdfTypes::ARRAY:
-				object = new BdfArray(lookupTable, oData, s);
+			case BdfTypes::LIST:
+				object = new BdfList(lookupTable, oData, s);
 				break;
 			case BdfTypes::NAMED_LIST:
 				object = new BdfNamedList(lookupTable, oData, s);
@@ -202,7 +205,7 @@ BdfObject::BdfObject(BdfLookupTable* pLookupTable, BdfStringReader* sr)
 	}
 
 	if(c == '[') {
-		setArray(new BdfArray(lookupTable, sr));
+		setList(new BdfList(lookupTable, sr));
 		return;
 	}
 
@@ -750,10 +753,10 @@ void BdfObject::freeAll()
 {
 	switch(type)
 	{
-		case BdfTypes::ARRAY:
+		case BdfTypes::LIST:
 		{
 			if(object != NULL) {
-				delete (BdfArray*)object;
+				delete (BdfList*)object;
 				object = NULL;
 			}
 		
@@ -813,8 +816,8 @@ int BdfObject::serializeSeeker(int* locations)
 		case BdfTypes::NAMED_LIST:
 			size = ((BdfNamedList*)object)->serializeSeeker(locations) + 1;
 			break;
-		case BdfTypes::ARRAY:
-			size = ((BdfArray*)object)->serializeSeeker(locations) + 1;
+		case BdfTypes::LIST:
+			size = ((BdfList*)object)->serializeSeeker(locations) + 1;
 			break;
 		default:
 			size = s + 1;
@@ -875,8 +878,8 @@ int BdfObject::serialize(char *pData, int* locations, unsigned char parent_flags
 			size = v->serialize(pData + offset, locations) + offset;
 			break;
 		}
-		case BdfTypes::ARRAY: {
-			BdfArray* v = (BdfArray*)object;
+		case BdfTypes::LIST: {
+			BdfList* v = (BdfList*)object;
 			size = v->serialize(pData + offset, locations) + offset;
 			break;
 		}
@@ -911,8 +914,8 @@ void BdfObject::getLocationUses(int* locations)
 		case BdfTypes::NAMED_LIST:
 			((BdfNamedList*)object)->getLocationUses(locations);
 			return;
-		case BdfTypes::ARRAY:
-			((BdfArray*)object)->getLocationUses(locations);
+		case BdfTypes::LIST:
+			((BdfList*)object)->getLocationUses(locations);
 			return;
 		default:
 			return;
@@ -966,8 +969,8 @@ void BdfObject::serializeHumanReadable(std::ostream &out, BdfIndent indent, int 
 	{
 		// Objects
 
-		case BdfTypes::ARRAY: {
-			((BdfArray*)object)->serializeHumanReadable(out, indent, it);
+		case BdfTypes::LIST: {
+			((BdfList*)object)->serializeHumanReadable(out, indent, it);
 			return;
 		}
 
@@ -1197,8 +1200,8 @@ BdfNamedList* BdfObject::newNamedList() {
 	return new BdfNamedList(lookupTable);
 }
 
-BdfArray* BdfObject::newArray() {
-	return new BdfArray(lookupTable);
+BdfList* BdfObject::newList() {
+	return new BdfList(lookupTable);
 }
 
 BdfObject* BdfObject::setAutoInt(long number)
@@ -1451,21 +1454,21 @@ std::string BdfObject::getString()
 	return *v;
 }
 
-BdfArray* BdfObject::getArray()
+BdfList* BdfObject::getList()
 {
-	BdfArray* v;
+	BdfList* v;
 
-	if(type == BdfTypes::ARRAY) {
-		v = (BdfArray*)object;
+	if(type == BdfTypes::LIST) {
+		v = (BdfList*)object;
 	}
 	
 	else
 	{
 		freeAll();
-		v = new BdfArray(lookupTable);
+		v = new BdfList(lookupTable);
 	}
 
-	type = BdfTypes::ARRAY;
+	type = BdfTypes::LIST;
 	object = v;
 	return v;
 }
@@ -1689,11 +1692,11 @@ BdfObject* BdfObject::setString(std::string v)
 	return this;
 }
 
-BdfObject* BdfObject::setArray(BdfArray* v)
+BdfObject* BdfObject::setList(BdfList* v)
 {
 	freeAll();
 
-	type = BdfTypes::ARRAY;
+	type = BdfTypes::LIST;
 	object = v;
 
 	return this;

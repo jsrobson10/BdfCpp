@@ -1,10 +1,12 @@
 
-#include "BdfStringReader.h"
-#include "BdfError.h"
+#include "BdfStringReader.hpp"
+#include "BdfError.hpp"
 
 #include <string>
 #include <codecvt>
 #include <locale>
+
+using namespace Bdf;
 
 BdfStringReader::BdfStringReader(const wchar_t* ptr, int size)
 {

@@ -1,5 +1,5 @@
 
-#include <bdf/Bdf.h>
+#include <bdf/Bdf.hpp>
 
 #include <iostream>
 #include <fstream>
@@ -46,11 +46,11 @@ int main()
 	
 	// Pack the fibonacci sequence into a BDF archive
 	
-	BdfReader reader;
+	Bdf::BdfReader reader;
 
 	// Set the reader object to a named list
-	BdfObject* bdf = reader.getObject();
-	BdfNamedList* nl = bdf->getNamedList();
+	Bdf::BdfObject* bdf = reader.getObject();
+	Bdf::BdfNamedList* nl = bdf->getNamedList();
 
 	// Set "fibonacciNumbers" in the named list to the fibonacci numbers as an int array
 	nl->set("fibonacciNumbers", bdf->newObject()->setIntegerArray(fibonacci, size));
