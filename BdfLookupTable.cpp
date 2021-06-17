@@ -38,7 +38,7 @@ BdfLookupTable::BdfLookupTable(BdfReader* pReader, const char* data, int size) :
 		*keys_endp = key_new;
 		keys_endp = &key_new->next;
 
-		size += 1;
+		keys_size += 1;
 		i += key_size;
 	}
 }
@@ -110,19 +110,18 @@ unsigned int BdfLookupTable::getLocation(std::string key)
 std::string BdfLookupTable::getName(unsigned int key)
 {
 	if(keys_size != keys_size_mapped) remapKeys();
-	
+	if(key < 0 || key >= keys_size) return "";
+
 	return keys_mapped[key]->key;
 }
 
 bool BdfLookupTable::hasKeyLocation(unsigned int key) {
-	return key < keys_size;
+	return key >= 0 && key < keys_size;
 }
 
 int BdfLookupTable::serialize(char* data, int* locations, int locations_size)
 {
 	int upto = 0;
-
-	if(keys_size != keys_size_mapped) remapKeys();
 
 	for(int i=0;i<locations_size;i++)
 	{

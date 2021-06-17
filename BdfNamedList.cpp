@@ -70,7 +70,7 @@ BdfNamedList::BdfNamedList(BdfLookupTable* pLookupTable, const char* data, int s
 				break;
 		}
 
-		if(lookupTable->hasKeyLocation(key)) {
+		if(!lookupTable->hasKeyLocation(key)) {
 			return;
 		}
 
