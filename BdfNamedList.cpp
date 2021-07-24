@@ -54,19 +54,17 @@ BdfNamedList::BdfNamedList(BdfLookupTable* pLookupTable, const char* data, int s
 
 		// Get the key
 		int key = 0;
-		char key_buff[key_size];
-		reverseIfLittleEndian(key_buff, data + i, key_size);
 
 		switch(key_size_bytes)
 		{
 			case 2:
-				key = *((unsigned char*)key_buff);
+				key = ((unsigned char*)data)[i];
 				break;
 			case 1:
-				key = *((unsigned short*)key_buff);
+				key = get_netus(data + i);
 				break;
 			case 0:
-				key = *((int*)key_buff);
+				key = get_netsi(data + i);
 				break;
 		}
 
@@ -352,11 +350,16 @@ int BdfNamedList::serialize(char* data, int* locations)
 		int size = cur->object->serialize(data + pos, locations, size_bytes_tag);
 		int offset = pos + size;
 
-		char bytes[4];
-		reverseIfLittleEndian(bytes, &location, 4);
-
-		for(int i=0;i<size_bytes;i++) {
-			data[i + offset] = bytes[i - size_bytes + 4];
+		switch(size_bytes_tag)
+		{
+			case 0:
+				put_netsi(data + offset, location);
+				break;
+			case 1:
+				put_netus(data + offset, location);
+				break;
+			default:
+				data[offset] = location & 255;
 		}
 
 		pos += size + size_bytes;

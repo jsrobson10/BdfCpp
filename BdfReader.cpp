@@ -56,26 +56,23 @@ BdfReader::BdfReader(const char* data, int size)
 	data += bdf_size;
 
 	// Get the size of the lookup table
-	char* lookupTable_size_buff = new char[lookupTable_size_bytes];
-	reverseIfLittleEndian(lookupTable_size_buff, data, lookupTable_size_bytes);
 	int lookupTable_size = 0;
 
 	switch(lookupTable_size_tag)
 	{
 		case 0:
-			lookupTable_size = *((int*)lookupTable_size_buff);
+			lookupTable_size = get_netsi(data);
 			break;
 		case 1:
-			lookupTable_size = *((unsigned short*)lookupTable_size_buff);
+			lookupTable_size = get_netus(data);
 			break;
 		case 2:
-			lookupTable_size = *((unsigned char*)lookupTable_size_buff);
+			lookupTable_size = data[0] & 255;
 			break;
 	}
 	
 	// Check if there is enough space in the buffer
 	if(bdf_size + lookupTable_size_bytes + lookupTable_size > size) {
-		delete[] lookupTable_size_buff;
 		initEmpty();
 		return;
 	}
@@ -83,8 +80,6 @@ BdfReader::BdfReader(const char* data, int size)
 	// Load the lookup table and the objects from the buffer
 	lookupTable = new BdfLookupTable(this, data + lookupTable_size_bytes, lookupTable_size);
 	bdf = new BdfObject(lookupTable, data_bdf, bdf_size);
-	
-	delete[] lookupTable_size_buff;
 }
 
 BdfReader::~BdfReader() {
@@ -125,11 +120,16 @@ void BdfReader::serialize(char** pData, int* pSize)
 	bdf->serialize(data, locations, lookupTable_size_tag);
 	data += bdf_size;
 
-	char bytes[4];
-	reverseIfLittleEndian(bytes, &lookupTable_size, 4);
-
-	for(int i=0;i<lookupTable_size_bytes;i++) {
-		data[i] = bytes[i - lookupTable_size_bytes + 4];
+	switch(lookupTable_size_bytes)
+	{
+		case 4:
+			put_netsi(data, lookupTable_size);
+			break;
+		case 2:
+			put_netus(data, lookupTable_size);
+			break;
+		default:
+			data[0] = lookupTable_size & 255;
 	}
 
 	lookupTable->serialize(data + lookupTable_size_bytes, locations, locations_size);

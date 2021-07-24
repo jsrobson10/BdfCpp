@@ -62,14 +62,11 @@ int BdfObject::getSize(const char* data)
 
 	char size_bytes = getSizeBytes(size_tag);
 
-	char size_buff[size_bytes];
-	reverseIfLittleEndian(size_buff, data + 1, size_bytes);
-
 	switch(size_bytes)
 	{
-		case 4: return *(int*)size_buff;
-		case 2: return *(unsigned short*)size_buff;
-		case 1: return *(unsigned char*)size_buff;
+		case 4: return get_netsi(data + 1);
+		case 2: return get_netus(data + 1);
+		case 1: return data[1] & 255;
 	}
 
 	return 0;
@@ -896,11 +893,16 @@ int BdfObject::serialize(char *pData, int* locations, unsigned char parent_flags
 
 	if(storeSize)
 	{
-		char bytes[4];
-		reverseIfLittleEndian(bytes, &size, 4);
-
-		for(int i=0;i<size_bytes;i++) {
-			pData[i + 1] = bytes[i - size_bytes + 4];
+		switch(size_bytes_tag)
+		{
+			case 0:
+				put_netsi(pData + 1, size);
+				break;
+			case 1:
+				put_netus(pData + 1, size);
+				break;
+			default:
+				pData[1] = size & 255;
 		}
 	}
 
@@ -1246,9 +1248,7 @@ int32_t BdfObject::getInteger()
 		return 0;
 	}
 
-	uint32_t v;
-	reverseIfLittleEndian(&v, data, 4);
-	return v;
+	return get_netsi(data);
 }
 
 bool BdfObject::getBoolean()
@@ -1266,9 +1266,7 @@ int64_t BdfObject::getLong()
 		return 0;
 	}
 
-	uint64_t v;
-	reverseIfLittleEndian(&v, data, 8);
-	return v;
+	return get_netsl(data);
 }
 
 int16_t BdfObject::getShort()
@@ -1277,9 +1275,7 @@ int16_t BdfObject::getShort()
 		return 0;
 	}
 
-	uint16_t v;
-	reverseIfLittleEndian(&v, data, 2);
-	return v;
+	return get_netss(data);
 }
 
 char BdfObject::getByte()
@@ -1297,9 +1293,7 @@ double BdfObject::getDouble()
 		return 0;
 	}
 
-	double v;
-	reverseIfLittleEndian(&v, data, 8);
-	return v;
+	return get_netd(data);
 }
 
 float BdfObject::getFloat()
@@ -1308,9 +1302,7 @@ float BdfObject::getFloat()
 		return 0;
 	}
 
-	float v;
-	reverseIfLittleEndian(&v, data, 4);
-	return v;
+	return get_netf(data);
 }
 
 // Arrays
@@ -1329,7 +1321,7 @@ void BdfObject::getIntegerArray(int32_t** v, int* pSize)
 	*pSize = size;
 
 	for(int i=0;i<size;i++) {
-		reverseIfLittleEndian(&array[i], data + i * l, l);
+		array[i] = get_netsi(data + i * l);
 	}
 }
 
@@ -1363,7 +1355,7 @@ void BdfObject::getShortArray(int16_t** v, int* pSize)
 	*v = array;
 
 	for(int i=0;i<size;i++) {
-		reverseIfLittleEndian(&array[i], data + i * l, l);
+		array[i] = get_netss(data + i * l);
 	}
 }
 
@@ -1381,7 +1373,7 @@ void BdfObject::getLongArray(int64_t** v, int* pSize)
 	*v = array;
 
 	for(int i=0;i<size;i++) {
-		reverseIfLittleEndian(&array[i], data + i * l, l);
+		array[i] = get_netsl(data + i * l);
 	}
 }
 
@@ -1411,7 +1403,7 @@ void BdfObject::getDoubleArray(double** v, int* pSize)
 	*pSize = size;
 
 	for(int i=0;i<size;i++) {
-		reverseIfLittleEndian(&array[i], data + i * l, l);
+		array[i] = get_netd(data + i * l);
 	}
 }
 
@@ -1429,7 +1421,7 @@ void BdfObject::getFloatArray(float** v, int* pSize)
 	*pSize = size;
 
 	for(int i=0;i<size;i++) {
-		reverseIfLittleEndian(&array[i], data + i * l, l);
+		array[i] = get_netf(data + i * l);
 	}
 }
 
@@ -1503,7 +1495,7 @@ BdfObject* BdfObject::setInteger(int32_t v)
 	s = sizeof(v);
 	data = new char[4];
 	type = BdfTypes::INTEGER;
-	reverseIfLittleEndian(data, &v, 4);
+	put_netsi(data, v);
 	return this;
 }
 
@@ -1514,7 +1506,7 @@ BdfObject* BdfObject::setLong(int64_t v)
 	s = sizeof(v);
 	data = new char[8];
 	type = BdfTypes::LONG;
-	reverseIfLittleEndian(data, &v, 8);
+	put_netsl(data, v);
 	return this;
 }
 
@@ -1522,14 +1514,10 @@ BdfObject* BdfObject::setShort(int16_t v)
 {
 	freeAll();
 
-	if(data != NULL) {
-		delete[] data;
-	}
-
 	s = sizeof(v);
 	data = new char[2];
 	type = BdfTypes::SHORT;
-	reverseIfLittleEndian(data, &v, 2);
+	put_netss(data, v);
 	return this;
 }
 
@@ -1550,7 +1538,7 @@ BdfObject* BdfObject::setDouble(double v)
 	s = sizeof(v);
 	data = new char[8];
 	type = BdfTypes::DOUBLE;
-	reverseIfLittleEndian(data, &v, 8);
+	put_netd(data, v);
 	return this;
 }
 
@@ -1561,7 +1549,7 @@ BdfObject* BdfObject::setFloat(float v)
 	s = sizeof(v);
 	data = new char[4];
 	type = BdfTypes::FLOAT;
-	reverseIfLittleEndian(data, &v, 4);
+	put_netf(data, v);
 	return this;
 }
 
@@ -1586,7 +1574,7 @@ BdfObject* BdfObject::setIntegerArray(const int32_t* v, int size)
 	type = BdfTypes::ARRAY_INTEGER;
 
 	for(int i=0;i<size;i++) {
-		reverseIfLittleEndian(data + i * 4, &v[i], 4);
+		put_netsi(data + i * 4, v[i]);
 	}
 
 	return this;
@@ -1616,7 +1604,7 @@ BdfObject* BdfObject::setLongArray(const int64_t* v, int size)
 	type = BdfTypes::ARRAY_LONG;
 
 	for(int i=0;i<size;i++) {
-		reverseIfLittleEndian(data + i * 8, &v[i], 8);
+		put_netsl(data + i * 8, v[i]);
 	}
 
 	return this;
@@ -1631,7 +1619,7 @@ BdfObject* BdfObject::setShortArray(const int16_t* v, int size)
 	type = BdfTypes::ARRAY_SHORT;
 
 	for(int i=0;i<size;i++) {
-		reverseIfLittleEndian(data + i * 2, &v[i], 2);
+		put_netss(data + i * 2, v[i]);
 	}
 
 	return this;
@@ -1659,7 +1647,7 @@ BdfObject* BdfObject::setDoubleArray(const double* v, int size)
 	type = BdfTypes::ARRAY_DOUBLE;
 
 	for(int i=0;i<size;i++) {
-		reverseIfLittleEndian(data + i * 8, &v[i], 8);
+		put_netd(data + i * 8, v[i]);
 	}
 
 	return this;
@@ -1674,7 +1662,7 @@ BdfObject* BdfObject::setFloatArray(const float* v, int size)
 	type = BdfTypes::ARRAY_FLOAT;
 
 	for(int i=0;i<size;i++) {
-		reverseIfLittleEndian(data + i * 4, &v[i], 4);
+		put_netf(data + i * 4, v[i]);
 	}
 
 	return this;

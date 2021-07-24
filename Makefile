@@ -1,5 +1,5 @@
 CC=g++-10
-CARGS=-g -Wall -Werror -fpic -DIS_LITTLE_ENDIAN=1
+CARGS=-g -Wall -Werror -fpic
 CFLAGS=BdfList.hpp BdfNamedList.hpp BdfObject.hpp BdfTypes.hpp BdfIndent.hpp BdfReader.hpp BdfLookupTable.hpp BdfHelpers.hpp BdfError.hpp BdfStringReader.hpp BdfReaderHuman.hpp Bdf.hpp
 COMPILE=BdfList.o BdfNamedList.o BdfObject.o BdfIndent.o BdfLookupTable.o BdfReader.o BdfHelpers.o BdfError.o BdfStringReader.o BdfReaderHuman.o
 OUT=libbdf.so.0
